@@ -157,16 +157,17 @@ export class GeminiClient {
 				// 429エラーの診断情報
 				if (response.status === 429) {
 					console.error('[Gemini API] 429エラー診断:');
-					console.error('  - モデル名:', config.model, '(有効: gemini-2.0-flash-lite, gemini-2.5-flash)');
+					console.error('  - モデル名:', config.model, '(有効: gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro)');
 					console.error('  - APIキー:', config.apiKey.substring(0, 12) + '...' + config.apiKey.substring(config.apiKey.length - 4));
 					console.error('  - エラーメッセージ:', errorDetails?.error?.message);
 
 					// 推奨アクション
 					console.warn('[Gemini API] 推奨アクション:');
-					console.warn('  1. Google AI Studio (https://aistudio.google.com) でAPIキーのクォータを確認');
-					console.warn('  2. 別のAPIキーを試す');
-					console.warn('  3. gemini-2.5-flash に変更してみる');
-					console.warn('  4. 1-2分待ってから再試行');
+					console.warn('  1. Google AI Studio (https://aistudio.google.com/apikey) でAPIキーのクォータを確認');
+					console.warn('  2. 新しいAPIキーを作成して試す');
+					console.warn('  3. プラグイン設定でモデルを gemini-2.5-flash に変更');
+					console.warn('  4. 既存のユーザーは、設定画面でモデルを gemini-2.5-flash に変更してください');
+					console.warn('  5. 1-2分待ってから再試行');
 				}
 
 				// エラーメッセージを整形

@@ -21,7 +21,7 @@ export interface NoteNamerSettings {
 export const DEFAULT_SETTINGS: NoteNamerSettings = {
 	// API Settings
 	apiKey: '',
-	model: 'gemini-2.0-flash-lite',
+	model: 'gemini-2.5-flash',
 
 	// Title Generation Settings
 	maxTitleLength: 40,

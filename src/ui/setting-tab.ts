@@ -44,11 +44,11 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('モデル')
-			.setDesc('使用するGeminiモデルを選択')
+			.setDesc('使用するGeminiモデルを選択（推奨: gemini-2.5-flash）')
 			.addDropdown(dropdown => dropdown
-				.addOption('gemini-2.0-flash-lite', 'gemini-2.0-flash-lite')
-				.addOption('gemini-1.5-flash', 'gemini-1.5-flash')
-				.addOption('gemini-1.5-pro', 'gemini-1.5-pro')
+				.addOption('gemini-2.5-flash', 'gemini-2.5-flash（推奨）')
+				.addOption('gemini-2.5-flash-lite', 'gemini-2.5-flash-lite（高速・低コスト）')
+				.addOption('gemini-2.5-pro', 'gemini-2.5-pro（高性能）')
 				.setValue(this.plugin.settings.model)
 				.onChange(async (value) => {
 					this.plugin.settings.model = value;
