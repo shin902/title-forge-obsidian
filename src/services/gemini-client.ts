@@ -134,11 +134,40 @@ export class GeminiClient {
 					errorDetails = { rawText: response.text };
 				}
 
+				// ヘッダーの重要情報を抽出
+				const headers = response.headers || {};
+				const importantHeaders = {
+					'content-type': headers['content-type'],
+					'x-goog-api-key-expired': headers['x-goog-api-key-expired'],
+					'x-goog-quota-user': headers['x-goog-quota-user'],
+					'x-goog-api-key-type': headers['x-goog-api-key-type'],
+					'retry-after': headers['retry-after'],
+					'date': headers['date']
+				};
+
 				console.error('[Gemini API] エラー詳細:', {
 					status: response.status,
-					headers: response.headers,
+					model: config.model,
+					apiKeyPrefix: config.apiKey.substring(0, 8) + '...',
+					headers: importantHeaders,
+					allHeaderKeys: Object.keys(headers),
 					errorBody: errorDetails
 				});
+
+				// 429エラーの診断情報
+				if (response.status === 429) {
+					console.error('[Gemini API] 429エラー診断:');
+					console.error('  - モデル名:', config.model, '(有効: gemini-2.0-flash-lite, gemini-2.5-flash)');
+					console.error('  - APIキー:', config.apiKey.substring(0, 12) + '...' + config.apiKey.substring(config.apiKey.length - 4));
+					console.error('  - エラーメッセージ:', errorDetails?.error?.message);
+
+					// 推奨アクション
+					console.warn('[Gemini API] 推奨アクション:');
+					console.warn('  1. Google AI Studio (https://aistudio.google.com) でAPIキーのクォータを確認');
+					console.warn('  2. 別のAPIキーを試す');
+					console.warn('  3. gemini-2.5-flash に変更してみる');
+					console.warn('  4. 1-2分待ってから再試行');
+				}
 
 				// エラーメッセージを整形
 				const errorMessage = errorDetails?.error?.message || response.text;
