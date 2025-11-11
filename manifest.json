@@ -1,0 +1,11 @@
+{
+	"id": "note-namer",
+	"name": "Note Namer",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Automatically generate note titles and tags using Gemini AI",
+	"author": "Development Team",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
