@@ -179,10 +179,24 @@ export class GeminiClient {
 			}
 
 			const data: GeminiResponse = response.json;
+
+			// レスポンス構造をデバッグ出力
+			console.log('[Gemini API] レスポンス構造:', {
+				hasCandidates: !!data.candidates,
+				candidatesLength: data.candidates?.length,
+				firstCandidate: data.candidates?.[0],
+				fullResponse: data
+			});
+
 			const text = this.extractText(data);
 
 			if (!text) {
-				console.error('[Gemini API] レスポンス解析失敗:', data);
+				console.error('[Gemini API] レスポンス解析失敗:', {
+					data: data,
+					candidate: data.candidates?.[0],
+					content: data.candidates?.[0]?.content,
+					parts: data.candidates?.[0]?.content?.parts
+				});
 				throw new Error('Gemini APIからのレスポンスを解析できませんでした。');
 			}
 
