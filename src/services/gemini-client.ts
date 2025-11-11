@@ -27,15 +27,51 @@ export interface GeminiResponse {
 export class GeminiClient {
 	private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 	private readonly timeout = 30000; // 30 seconds
+	private readonly maxRetries = 3; // Maximum number of retries for 429 errors
+	private readonly initialRetryDelay = 2000; // Initial retry delay in ms (2 seconds)
 
 	/**
-	 * Generates content using Gemini API
+	 * Generates content using Gemini API with retry logic for rate limiting
 	 * @param prompt - The prompt to send to Gemini
 	 * @param config - Configuration for the API call
 	 * @returns Generated text
-	 * @throws Error if API call fails
+	 * @throws Error if API call fails after all retries
 	 */
 	async generateContent(prompt: string, config: GeminiConfig): Promise<string> {
+		let lastError: Error | null = null;
+
+		for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+			try {
+				return await this.generateContentInternal(prompt, config, attempt);
+			} catch (error) {
+				if (error instanceof Error) {
+					lastError = error;
+
+					// Check if it's a 429 error and we have retries left
+					const is429Error = error.message.includes('[429 RESOURCE_EXHAUSTED]');
+					if (is429Error && attempt < this.maxRetries) {
+						const delay = this.initialRetryDelay * Math.pow(2, attempt);
+						console.warn(`[Gemini API] 429エラー: ${attempt + 1}回目のリトライを${delay}ms後に実行します...`);
+						await this.sleep(delay);
+						continue;
+					}
+				}
+				throw error;
+			}
+		}
+
+		throw lastError || new Error('リクエストが失敗しました。');
+	}
+
+	/**
+	 * Internal method to generate content using Gemini API
+	 * @param prompt - The prompt to send to Gemini
+	 * @param config - Configuration for the API call
+	 * @param attempt - Current retry attempt number
+	 * @returns Generated text
+	 * @throws Error if API call fails
+	 */
+	private async generateContentInternal(prompt: string, config: GeminiConfig, attempt: number): Promise<string> {
 		const url = `${this.baseUrl}/${config.model}:generateContent?key=${config.apiKey}`;
 
 		const requestBody = {
@@ -52,7 +88,8 @@ export class GeminiClient {
 			}
 		};
 
-		console.log('[Gemini API] リクエスト送信:', {
+		const attemptLabel = attempt > 0 ? ` (リトライ ${attempt}回目)` : '';
+		console.log(`[Gemini API] リクエスト送信${attemptLabel}:`, {
 			url: this.baseUrl,
 			model: config.model,
 			promptLength: prompt.length
@@ -133,5 +170,13 @@ export class GeminiClient {
 		} catch {
 			return null;
 		}
+	}
+
+	/**
+	 * Sleep for a specified duration
+	 * @param ms - Duration in milliseconds
+	 */
+	private sleep(ms: number): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 }
