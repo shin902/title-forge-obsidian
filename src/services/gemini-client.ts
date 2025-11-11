@@ -17,6 +17,11 @@ export interface GeminiResponse {
 			}>;
 		};
 	}>;
+	error?: {
+		code?: number;
+		message?: string;
+		status?: string;
+	};
 }
 
 export class GeminiClient {
@@ -47,6 +52,12 @@ export class GeminiClient {
 			}
 		};
 
+		console.log('[Gemini API] リクエスト送信:', {
+			url: this.baseUrl,
+			model: config.model,
+			promptLength: prompt.length
+		});
+
 		try {
 			const response: RequestUrlResponse = await requestUrl({
 				url: url,
@@ -58,20 +69,50 @@ export class GeminiClient {
 				throw: false
 			});
 
+			console.log('[Gemini API] レスポンス受信:', {
+				status: response.status,
+				statusText: response.status === 200 ? 'OK' : 'Error'
+			});
+
 			if (response.status !== 200) {
-				throw new Error(`Gemini APIエラー: ${response.status} ${response.text}`);
+				// エラー詳細をコンソールに出力
+				let errorDetails;
+				try {
+					errorDetails = typeof response.json === 'object' ? response.json : JSON.parse(response.text);
+				} catch {
+					errorDetails = { rawText: response.text };
+				}
+
+				console.error('[Gemini API] エラー詳細:', {
+					status: response.status,
+					headers: response.headers,
+					errorBody: errorDetails
+				});
+
+				// エラーメッセージを整形
+				const errorMessage = errorDetails?.error?.message || response.text;
+				const errorCode = errorDetails?.error?.code || response.status;
+				const errorStatus = errorDetails?.error?.status || 'UNKNOWN';
+
+				throw new Error(`Gemini APIエラー [${errorCode} ${errorStatus}]: ${errorMessage}`);
 			}
 
 			const data: GeminiResponse = response.json;
 			const text = this.extractText(data);
 
 			if (!text) {
+				console.error('[Gemini API] レスポンス解析失敗:', data);
 				throw new Error('Gemini APIからのレスポンスを解析できませんでした。');
 			}
+
+			console.log('[Gemini API] 成功:', {
+				responseLength: text.length
+			});
 
 			return text.trim();
 
 		} catch (error) {
+			console.error('[Gemini API] 例外発生:', error);
 			if (error instanceof Error) {
 				throw error;
 			}

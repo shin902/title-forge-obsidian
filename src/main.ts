@@ -121,6 +121,7 @@ export default class NoteNamerPlugin extends Plugin {
 			}
 
 		} catch (error) {
+			console.error('[Note Namer] タイトル生成エラー:', error);
 			if (error instanceof Error) {
 				this.showError(error.message);
 			} else {
@@ -180,6 +181,7 @@ export default class NoteNamerPlugin extends Plugin {
 			}
 
 		} catch (error) {
+			console.error('[Note Namer] タグ生成エラー:', error);
 			if (error instanceof Error) {
 				this.showError(error.message);
 			} else {
