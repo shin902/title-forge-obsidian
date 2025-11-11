@@ -28,7 +28,7 @@ export class GeminiClient {
 	private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 	private readonly timeout = 30000; // 30 seconds
 	private readonly maxRetries = 3; // Maximum number of retries for 429 errors
-	private readonly initialRetryDelay = 2000; // Initial retry delay in ms (2 seconds)
+	private readonly initialRetryDelay = 5000; // Initial retry delay in ms (5 seconds)
 
 	/**
 	 * Generates content using Gemini API with retry logic for rate limiting
@@ -44,19 +44,33 @@ export class GeminiClient {
 			try {
 				return await this.generateContentInternal(prompt, config, attempt);
 			} catch (error) {
+				console.log(`[Gemini API Debug] Caught error in generateContent, attempt ${attempt}/${this.maxRetries}`);
+
 				if (error instanceof Error) {
 					lastError = error;
 
+					console.log(`[Gemini API Debug] Error message: "${error.message}"`);
+
 					// Check if it's a 429 error and we have retries left
-					const is429Error = error.message.includes('[429 RESOURCE_EXHAUSTED]');
+					const is429Error = error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED');
+					console.log(`[Gemini API Debug] is429Error: ${is429Error}, attempt < maxRetries: ${attempt < this.maxRetries}`);
+
 					if (is429Error && attempt < this.maxRetries) {
 						const delay = this.initialRetryDelay * Math.pow(2, attempt);
-						console.warn(`[Gemini API] 429エラー: ${attempt + 1}回目のリトライを${delay}ms後に実行します...`);
+						console.warn(`[Gemini API] 429エラー検出: ${attempt + 1}回目のリトライを${delay / 1000}秒後に実行します...`);
 						await this.sleep(delay);
 						continue;
+					} else if (!is429Error) {
+						console.log(`[Gemini API Debug] Not a 429 error, throwing immediately`);
+						throw error;
+					} else {
+						console.error(`[Gemini API] ${this.maxRetries}回のリトライ後も429エラーが解決しませんでした。`);
+						throw new Error(`Gemini APIのレート制限: ${this.maxRetries}回リトライしましたが、サーバーが混雑しています。しばらく待ってから再度お試しください。`);
 					}
+				} else {
+					console.log(`[Gemini API Debug] Error is not an Error instance`);
+					throw error;
 				}
-				throw error;
 			}
 		}
 
@@ -149,7 +163,7 @@ export class GeminiClient {
 			return text.trim();
 
 		} catch (error) {
-			console.error('[Gemini API] 例外発生:', error);
+			// Don't log here - let the outer generateContent handle logging and retries
 			if (error instanceof Error) {
 				throw error;
 			}
