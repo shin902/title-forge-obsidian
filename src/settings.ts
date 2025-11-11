@@ -26,11 +26,11 @@ export const DEFAULT_SETTINGS: NoteNamerSettings = {
 	// Title Generation Settings
 	maxTitleLength: 40,
 	titleTemperature: 0.2,
-	titleMaxOutputTokens: 64,
+	titleMaxOutputTokens: 256,
 
 	// Tag Generation Settings
 	tagTemperature: 0.2,
-	tagMaxOutputTokens: 128,
+	tagMaxOutputTokens: 256,
 	maxContentLength: 100,
 
 	// UI Settings
