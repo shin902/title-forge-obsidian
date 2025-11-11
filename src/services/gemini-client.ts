@@ -28,7 +28,7 @@ export class GeminiClient {
 	private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 	private readonly timeout = 30000; // 30 seconds
 	private readonly maxRetries = 3; // Maximum number of retries for 429 errors
-	private readonly initialRetryDelay = 5000; // Initial retry delay in ms (5 seconds)
+	private readonly initialRetryDelay = 10000; // Initial retry delay in ms (10 seconds)
 
 	/**
 	 * Generates content using Gemini API with retry logic for rate limiting
