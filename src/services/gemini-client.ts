@@ -181,10 +181,15 @@ export class GeminiClient {
 			const data: GeminiResponse = response.json;
 
 			// レスポンス構造をデバッグ出力
+			const firstCandidate = data.candidates?.[0];
 			console.log('[Gemini API] レスポンス構造:', {
 				hasCandidates: !!data.candidates,
 				candidatesLength: data.candidates?.length,
-				firstCandidate: data.candidates?.[0],
+				firstCandidate: firstCandidate,
+				candidateKeys: firstCandidate ? Object.keys(firstCandidate) : [],
+				content: firstCandidate?.content,
+				contentKeys: firstCandidate?.content ? Object.keys(firstCandidate.content) : [],
+				parts: firstCandidate?.content?.parts,
 				fullResponse: data
 			});
 
