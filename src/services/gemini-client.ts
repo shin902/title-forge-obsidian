@@ -193,6 +193,9 @@ export class GeminiClient {
 				fullResponse: data
 			});
 
+			// JSON文字列として出力（コピー可能）
+			console.log('[Gemini API] firstCandidate JSON:', JSON.stringify(firstCandidate, null, 2));
+
 			const text = this.extractText(data);
 
 			if (!text) {
