@@ -1,7 +1,9 @@
+// Fixed Gemini model (no longer configurable)
+export const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+
 export interface NoteNamerSettings {
 	// API Settings
 	apiKey: string;
-	model: string;
 
 	// Title Generation Settings
 	maxTitleLength: number;
@@ -21,7 +23,6 @@ export interface NoteNamerSettings {
 export const DEFAULT_SETTINGS: NoteNamerSettings = {
 	// API Settings
 	apiKey: '',
-	model: 'gemini-2.0-flash-lite',
 
 	// Title Generation Settings
 	maxTitleLength: 40,

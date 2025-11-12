@@ -1,6 +1,6 @@
 import { GeminiClient, GeminiConfig } from './gemini-client';
 import { normalizeTags, removeFrontmatter, truncateContent } from '../utils/text-sanitizer';
-import { NoteNamerSettings } from '../settings';
+import { NoteNamerSettings, GEMINI_MODEL } from '../settings';
 
 export class TagGenerator {
 	private geminiClient: GeminiClient;
@@ -27,7 +27,7 @@ export class TagGenerator {
 
 		const config: GeminiConfig = {
 			apiKey: settings.apiKey,
-			model: settings.model,
+			model: GEMINI_MODEL,
 			temperature: settings.tagTemperature,
 			topK: 1,
 			topP: 1,
