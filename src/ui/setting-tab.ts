@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import NoteNamerPlugin from '../main';
+import { validateApiKey } from '../utils/validator';
 
 export class NoteNamerSettingTab extends PluginSettingTab {
 	plugin: NoteNamerPlugin;
@@ -15,29 +16,81 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Privacy Notice
-		containerEl.createEl('div', {
-			text: 'このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。',
+		const privacyNotice = containerEl.createEl('div', {
 			cls: 'setting-item-description'
 		});
+		privacyNotice.innerHTML =
+			'<strong>プライバシーに関する注意:</strong><br>' +
+			'• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。<br>' +
+			'• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。';
 
 		containerEl.createEl('br');
 
 		// API Settings Section
 		containerEl.createEl('h2', { text: 'API設定' });
 
-		new Setting(containerEl)
+		const apiKeySetting = new Setting(containerEl)
 			.setName('Gemini API Key')
-			.setDesc('Gemini APIキーを入力してください')
-			.addText(text => {
-				text
-					.setPlaceholder('AIza...')
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.type = 'password';
+			.setDesc('Gemini APIキーを入力してください');
+
+		let validationMessage: HTMLElement | null = null;
+
+		apiKeySetting.addText(text => {
+			text
+				.setPlaceholder('AIza...')
+				.setValue(this.plugin.settings.apiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.apiKey = value;
+					await this.plugin.saveSettings();
+
+					// Validate and show feedback
+					if (validationMessage) {
+						validationMessage.remove();
+						validationMessage = null;
+					}
+
+					if (value && !validateApiKey(value)) {
+						validationMessage = containerEl.createEl('div', {
+							text: '⚠️ APIキーの形式が正しくない可能性があります（20文字以上、"AI"で始まる必要があります）',
+							cls: 'setting-item-description mod-warning'
+						});
+						apiKeySetting.settingEl.insertAdjacentElement('afterend', validationMessage);
+					}
+				});
+
+			// Set as password field
+			text.inputEl.type = 'password';
+
+			// Disable autocomplete
+			text.inputEl.setAttribute('autocomplete', 'off');
+
+			// Add visibility toggle button
+			const toggleBtn = text.inputEl.parentElement?.createEl('button', {
+				text: '👁️',
+				cls: 'api-key-toggle-btn'
 			});
+
+			if (toggleBtn) {
+				toggleBtn.setAttribute('type', 'button');
+				toggleBtn.setAttribute('aria-label', 'Toggle API key visibility');
+				toggleBtn.style.marginLeft = '8px';
+				toggleBtn.style.cursor = 'pointer';
+				toggleBtn.style.padding = '4px 8px';
+				toggleBtn.style.border = '1px solid var(--background-modifier-border)';
+				toggleBtn.style.borderRadius = '4px';
+				toggleBtn.style.background = 'var(--interactive-normal)';
+
+				toggleBtn.addEventListener('click', () => {
+					if (text.inputEl.type === 'password') {
+						text.inputEl.type = 'text';
+						toggleBtn.textContent = '🙈';
+					} else {
+						text.inputEl.type = 'password';
+						toggleBtn.textContent = '👁️';
+					}
+				});
+			}
+		});
 
 		// Add link to get API key
 		const apiKeyDesc = containerEl.createEl('div', {
