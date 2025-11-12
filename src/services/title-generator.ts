@@ -1,6 +1,6 @@
 import { GeminiClient, GeminiConfig } from './gemini-client';
 import { sanitizeTitle } from '../utils/text-sanitizer';
-import { NoteNamerSettings } from '../settings';
+import { NoteNamerSettings, GEMINI_MODEL } from '../settings';
 
 export class TitleGenerator {
 	private geminiClient: GeminiClient;
@@ -21,7 +21,7 @@ export class TitleGenerator {
 
 		const config: GeminiConfig = {
 			apiKey: settings.apiKey,
-			model: settings.model,
+			model: GEMINI_MODEL,
 			temperature: settings.titleTemperature,
 			topK: 1,
 			topP: 1,

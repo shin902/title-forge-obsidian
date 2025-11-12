@@ -42,19 +42,6 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 		});
 		apiKeyDesc.innerHTML = 'APIキーは<a href="https://aistudio.google.com/app/apikey" target="_blank">こちら</a>から取得できます';
 
-		new Setting(containerEl)
-			.setName('モデル')
-			.setDesc('使用するGeminiモデルを選択')
-			.addDropdown(dropdown => dropdown
-				.addOption('gemini-2.0-flash-lite', 'gemini-2.0-flash-lite')
-				.addOption('gemini-1.5-flash', 'gemini-1.5-flash')
-				.addOption('gemini-1.5-pro', 'gemini-1.5-pro')
-				.setValue(this.plugin.settings.model)
-				.onChange(async (value) => {
-					this.plugin.settings.model = value;
-					await this.plugin.saveSettings();
-				}));
-
 		// Title Generation Settings Section
 		containerEl.createEl('h2', { text: 'タイトル生成設定' });
 
