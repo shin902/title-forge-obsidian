@@ -1,5 +1,5 @@
 // Fixed Gemini model (no longer configurable)
-export const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+export const GEMINI_MODEL = 'gemini-2.5-flash-lite' as const;
 
 export interface NoteNamerSettings {
 	// API Settings
