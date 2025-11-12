@@ -28,13 +28,16 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Gemini API Key')
 			.setDesc('Gemini APIキーを入力してください')
-			.addText(text => text
-				.setPlaceholder('AIza...')
-				.setValue(this.plugin.settings.apiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.apiKey = value;
-					await this.plugin.saveSettings();
-				}));
+			.addText(text => {
+				text
+					.setPlaceholder('AIza...')
+					.setValue(this.plugin.settings.apiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.apiKey = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.type = 'password';
+			});
 
 		// Add link to get API key
 		const apiKeyDesc = containerEl.createEl('div', {
