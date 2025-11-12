@@ -1,7 +1,7 @@
 {
   "name": "obsidian-note-namer",
   "version": "1.0.0",
-  "description": "Obsidian plugin for automatic note title and tag generation using Gemini API",
+  "description": "TitleForge - Obsidian plugin for automatic note title and tag generation using Gemini API",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

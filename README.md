@@ -1,6 +1,7 @@
-# Note Namer for Obsidian
+# TitleForge
 
 Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生成とタグ自動追加を行います。
+完璧なタイトルとタグを鍛え上げ、あなたのノートを整理します。
 
 ## 機能
 
@@ -42,7 +43,7 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 ### 初期設定
 
 1. Obsidianの設定を開く
-2. 「Community plugins」→「Note Namer」を選択
+2. 「Community plugins」→「TitleForge」を選択
 3. Gemini APIキーを入力
    - APIキーは[Google AI Studio](https://aistudio.google.com/app/apikey)から取得
 
