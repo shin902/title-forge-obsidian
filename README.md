@@ -15,8 +15,8 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 
 1. リポジトリをクローン
    ```bash
-   git clone https://github.com/your-username/note-namer-obsidian.git
-   cd note-namer-obsidian
+   git clone https://github.com/shin902/title-forge-obsidian.git
+   cd title-forge-obsidian
    ```
 
 2. 依存関係をインストール
@@ -31,7 +31,7 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 
 4. プラグインファイルをObsidian Vaultにコピー
    ```bash
-   # YourVault/.obsidian/plugins/note-namer/ に以下をコピー
+   # YourVault/.obsidian/plugins/title-forge/ に以下をコピー
    - main.js
    - manifest.json
    ```
