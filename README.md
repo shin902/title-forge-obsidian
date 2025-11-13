@@ -24,19 +24,30 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
    npm install
    ```
 
-3. ビルド
+3. 環境変数の設定（開発用）
+   ```bash
+   # .env.exampleをコピーして.envファイルを作成
+   cp .env.example .env
+
+   # .envファイルを編集してGemini APIキーを設定
+   # GEMINI_API_KEY=your_api_key_here
+   ```
+
+   **注意**: `.env`ファイルは開発時のデフォルトAPIキーとしてビルド時に埋め込まれます。実際の使用時は、Obsidianの設定画面でAPIキーを設定することもできます。
+
+4. ビルド
    ```bash
    npm run build
    ```
 
-4. プラグインファイルをObsidian Vaultにコピー
+5. プラグインファイルをObsidian Vaultにコピー
    ```bash
    # YourVault/.obsidian/plugins/title-forge/ に以下をコピー
    - main.js
    - manifest.json
    ```
 
-5. Obsidianでプラグインを有効化
+6. Obsidianでプラグインを有効化
 
 ## 使い方
 
@@ -84,6 +95,20 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 ```bash
 npm install
 ```
+
+### 環境変数の設定
+
+開発時にデフォルトのAPIキーを使用する場合は、`.env`ファイルを作成してください。
+
+```bash
+# .env.exampleをコピー
+cp .env.example .env
+
+# .envファイルを編集してAPIキーを設定
+# GEMINI_API_KEY=your_api_key_here
+```
+
+**注意**: `.env`ファイルはGitにコミットされません（`.gitignore`に含まれています）。ビルド時に環境変数がデフォルト値として埋め込まれます。
 
 ### 開発ビルド（ファイル監視）
 
