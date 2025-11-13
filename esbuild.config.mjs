@@ -11,6 +11,12 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
+/**
+ * Note: styles.css is NOT processed by esbuild.
+ * Obsidian automatically loads any styles.css file found in the plugin's root directory
+ * alongside manifest.json. No additional configuration is needed.
+ */
+
 const context = await esbuild.context({
 	banner: {
 		js: banner,

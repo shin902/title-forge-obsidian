@@ -8,10 +8,11 @@ export function validateApiKey(apiKey: string): boolean {
 		return false;
 	}
 
-	// Gemini API keys are typically "AIza" followed by 35 base64-like characters
-	// Total length: 39 characters
-	// Format: AIza[A-Za-z0-9_-]{35}
-	const apiKeyPattern = /^AIza[A-Za-z0-9_-]{35}$/;
+	// Gemini API keys typically start with "AI" and are at least 20 characters
+	// We use a more lenient validation to accommodate different key formats
+	// that Google may issue for different services or over time
+	// Format: AI[A-Za-z0-9_-]{18,} (starts with AI, followed by 18+ alphanumeric/dash/underscore chars)
+	const apiKeyPattern = /^AI[A-Za-z0-9_-]{18,}$/;
 
 	return apiKeyPattern.test(apiKey);
 }

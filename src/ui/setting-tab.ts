@@ -6,8 +6,11 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 	plugin: NoteNamerPlugin;
 	private validationMessage: HTMLElement | null = null;
 	private validationTimeout: ReturnType<typeof setTimeout> | null = null;
-	private toggleButtonListener: ((this: HTMLElement, ev: MouseEvent) => any) | null = null;
+	private toggleButtonListener: (() => void) | null = null;
 	private toggleButton: HTMLElement | null = null;
+
+	// Validation debounce delay in milliseconds
+	private static readonly VALIDATION_DEBOUNCE_MS = 300;
 
 	constructor(app: App, plugin: NoteNamerPlugin) {
 		super(app, plugin);
@@ -23,6 +26,8 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 		// Clean up event listeners
 		if (this.toggleButton && this.toggleButtonListener) {
 			this.toggleButton.removeEventListener('click', this.toggleButtonListener);
+			// Remove button from DOM to prevent orphaned elements
+			this.toggleButton.remove();
 			this.toggleButtonListener = null;
 			this.toggleButton = null;
 		}
@@ -37,6 +42,29 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 		if (this.validationTimeout) {
 			clearTimeout(this.validationTimeout);
 			this.validationTimeout = null;
+		}
+	}
+
+	/**
+	 * Shows a validation warning message for API key
+	 * @param message - The warning message to display
+	 * @param settingEl - The setting element to insert the message after
+	 */
+	private showValidationWarning(message: string, settingEl: HTMLElement): void {
+		// Clear any existing validation message
+		if (this.validationMessage) {
+			this.validationMessage.remove();
+			this.validationMessage = null;
+		}
+
+		// Create new validation message
+		this.validationMessage = settingEl.parentElement?.createEl('div', {
+			text: message,
+			cls: 'setting-item-description mod-warning'
+		}) || null;
+
+		if (this.validationMessage) {
+			settingEl.insertAdjacentElement('afterend', this.validationMessage);
 		}
 	}
 
@@ -81,21 +109,18 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 					}
 
 					this.validationTimeout = setTimeout(() => {
-						// Clear any existing validation message
-						if (this.validationMessage) {
+						// Show validation feedback for invalid API keys
+						if (value && !validateApiKey(value)) {
+							this.showValidationWarning(
+								'⚠️ APIキーの形式が正しくない可能性があります（"AI"で始まる20文字以上である必要があります）',
+								apiKeySetting.settingEl
+							);
+						} else if (this.validationMessage) {
+							// Clear validation message when key becomes valid
 							this.validationMessage.remove();
 							this.validationMessage = null;
 						}
-
-						// Show validation feedback for invalid API keys
-						if (value && !validateApiKey(value)) {
-							this.validationMessage = containerEl.createEl('div', {
-								text: '⚠️ APIキーの形式が正しくない可能性があります（39文字、"AIza"で始まる必要があります）',
-								cls: 'setting-item-description mod-warning'
-							});
-							apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
-						}
-					}, 300);
+					}, NoteNamerSettingTab.VALIDATION_DEBOUNCE_MS);
 				});
 
 			// Set as password field
@@ -141,11 +166,10 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 			// Show initial validation if API key is invalid
 			const currentKey = this.plugin.settings.apiKey;
 			if (currentKey && !validateApiKey(currentKey)) {
-				this.validationMessage = containerEl.createEl('div', {
-					text: '⚠️ 保存されているAPIキーの形式が正しくない可能性があります',
-					cls: 'setting-item-description mod-warning'
-				});
-				apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
+				this.showValidationWarning(
+					'⚠️ 保存されているAPIキーの形式が正しくない可能性があります',
+					apiKeySetting.settingEl
+				);
 			}
 		});
 
