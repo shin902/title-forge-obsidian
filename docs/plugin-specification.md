@@ -40,8 +40,8 @@ Gemini APIを活用して、Obsidianノートのタイトル自動生成とタ�
 - 記号や絵文字を使用しない
 - 汎用的な接頭辞（「メモ」「ノート」「日記」など）を付けない
 - OS非互換文字（`/\:*?"<>|`）は自動的にスペースに置換
-- 連続する複数のスペースは単一スペースに変換
-- 前後の空白は削除
+- 連続する複数の空白文字（スペース、タブ、改行等）を単一スペースに変換
+- 前後の空白を削除
 - 重複時は自動的に連番を付与（例: `タイトル - 2.md`）
 
 #### 2.1.5 実行方法
@@ -210,8 +210,8 @@ title-forge-obsidian/
 
 **sanitizeTitle(title: string): string**
 - OS非互換文字（`/\:*?"<>|`）をスペースに置換
-- 連続する複数のスペースを単一スペースに変換
-- 前後の空白を削除
+- 連続する複数の空白文字（スペース、タブ、改行等）を単一スペースに変換（正規表現: `\s+`）
+- 前後の空白を削除（trim）
 
 **normalizeTags(tags: string | string[]): string[]**
 - カンマ区切り文字列または配列を受け入れ
@@ -416,27 +416,95 @@ title-forge-obsidian/
 
 ## 9. テスト要件
 
-### 9.1 単体テスト
-- テキストサニタイズ処理
-- タグ正規化処理
-- 環境変数読み込み
-- バリデーション処理
+### 9.1 テスト戦略
 
-### 9.2 統合テスト
-- Gemini API連携
+#### 9.1.1 テストフレームワーク
+推奨: Jest または Vitest
+```bash
+npm install --save-dev jest @types/jest ts-jest
+```
+
+#### 9.1.2 テストカバレッジ目標
+- **ユーティリティ関数**: 90%以上（高優先度）
+- **サービスクラス**: 80%以上（中優先度）
+- **UIコンポーネント**: 60%以上（低優先度）
+
+### 9.2 単体テスト
+
+#### 9.2.1 text-sanitizer.ts
+**sanitizeTitle()**
+- OS非互換文字の置換テスト
+  ```typescript
+  expect(sanitizeTitle('file/name:test')).toBe('file name test');
+  expect(sanitizeTitle('test*file?"name')).toBe('test file  name');
+  ```
+- 空白文字の正規化テスト
+  ```typescript
+  expect(sanitizeTitle('test    title')).toBe('test title');
+  expect(sanitizeTitle('test\t\ntitle')).toBe('test title');
+  ```
+- trim動作テスト
+  ```typescript
+  expect(sanitizeTitle('  title  ')).toBe('title');
+  ```
+
+**normalizeTags()**
+- カンマ区切り解析テスト
+- ハッシュタグ削除テスト
+- 小文字変換テスト
+- スペースのハイフン変換テスト
+- 重複除去テスト
+- 空タグ除去テスト
+
+**truncateContent()** / **removeFrontmatter()**
+- 境界値テスト
+- YAML Frontmatter解析テスト
+
+#### 9.2.2 validator.ts
+**validateApiKey()**
+- 有効なキー形式テスト
+  ```typescript
+  expect(validateApiKey('AIzaSyABCDEFGHIJKLMNOP12')).toBe(true);
+  ```
+- 無効なキー形式テスト
+  ```typescript
+  expect(validateApiKey('')).toBe(false);
+  expect(validateApiKey('invalid')).toBe(false);
+  expect(validateApiKey('AI')).toBe(false);
+  ```
+
+**validateContent()**
+- 空文字列・空白のみのテスト
+
+**arraysEqual()**
+- 順序が異なる配列の比較テスト
+- 重複要素のテスト
+
+### 9.3 統合テスト
+
+#### 9.3.1 Gemini API連携
+- モックAPIレスポンスのテスト
+- エラーハンドリングのテスト
+- タイムアウトのテスト
+
+#### 9.3.2 ファイル操作
 - ファイルリネーム処理
 - Frontmatter更新処理
+- 冪等性チェック
 
-### 9.3 手動テスト項目
+### 9.4 手動テスト項目
 - [ ] 空ノートでの実行
 - [ ] 日本語コンテンツでの実行
 - [ ] 英語コンテンツでの実行
 - [ ] 長文コンテンツでの実行
 - [ ] 特殊文字を含むコンテンツでの実行
 - [ ] APIキー未設定時の動作
+- [ ] APIキー形式不正時の動作
 - [ ] ネットワークエラー時の動作
 - [ ] 同名ファイル存在時の動作
-- [ ] すでに適切なタイトル/タグがある場合の動作
+- [ ] すでに適切なタイトル/タグがある場合の動作（冪等性）
+- [ ] UIバリデーションの動作（デバウンス、レースコンディション）
+- [ ] メモリリークの確認（設定画面の開閉を繰り返す）
 
 ---
 
@@ -495,6 +563,49 @@ title-forge-obsidian/
 
 ### 12.3 ライセンス
 MIT License（予定）
+
+---
+
+## 13. 変更履歴
+
+### Version 2.0 (2025-11-13)
+**大規模なリファクタリングとセキュリティ強化**
+
+#### 主要な変更
+- **プラグイン名変更**: `Note Namer` → `TitleForge`
+- **コマンドID変更**: `note-namer-*` → `title-forge-*`
+- **モデル固定化**: `gemini-2.5-flash-lite` に固定（ユーザーによる変更不可）
+
+#### セキュリティ強化
+- XSS対策: `innerHTML` の使用を廃止し、DOM APIメソッドに移行
+- メモリリーク対策: `cleanup()` および `hide()` メソッドの実装
+- レースコンディション対策: デバウンス処理（300ms）と `isMounted` フラグの導入
+- APIキーセキュリティ: `autocomplete="off"`、表示/非表示トグルボタン、リアルタイムバリデーション
+
+#### バリデーション強化
+- APIキー検証に正規表現パターン `/^AI[A-Za-z0-9_-]{18,}$/` を導入
+- より詳細なエラーメッセージの提供
+
+#### ドキュメント改善
+- 主要クラスのメソッド一覧を追加
+- ユーティリティ関数の詳細仕様を追加
+- セキュリティセクションを大幅拡充
+- テスト戦略セクションを追加
+
+### Version 1.1 (2025-11-10)
+**実装に合わせた仕様書の更新**
+
+- モデル設定の文書化を更新
+- プラグイン構造を実際のディレクトリ構成に合わせて修正
+- タイトル/タグ生成ルールの詳細化
+- エラーメッセージを実装と一致させる
+
+### Version 1.0 (初版)
+**初期仕様書の作成**
+
+- 基本的な機能要件の定義
+- Gemini API統合の設計
+- UI/UX仕様の策定
 
 ---
 
