@@ -1,9 +1,9 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import NoteNamerPlugin from '../main';
+import TitleForgePlugin from '../main';
 import { validateApiKey } from '../utils/validator';
 
-export class NoteNamerSettingTab extends PluginSettingTab {
-	plugin: NoteNamerPlugin;
+export class TitleForgeSettingTab extends PluginSettingTab {
+	plugin: TitleForgePlugin;
 	private validationMessage: HTMLElement | null = null;
 	private validationTimeout: ReturnType<typeof setTimeout> | null = null;
 	private toggleButtonListener: (() => void) | null = null;
@@ -12,7 +12,7 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 	// Validation debounce delay in milliseconds
 	private static readonly VALIDATION_DEBOUNCE_MS = 300;
 
-	constructor(app: App, plugin: NoteNamerPlugin) {
+	constructor(app: App, plugin: TitleForgePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -120,7 +120,7 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 							this.validationMessage.remove();
 							this.validationMessage = null;
 						}
-					}, NoteNamerSettingTab.VALIDATION_DEBOUNCE_MS);
+					}, TitleForgeSettingTab.VALIDATION_DEBOUNCE_MS);
 				});
 
 			// Set as password field
@@ -132,7 +132,7 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 			// Add visibility toggle button with proper cleanup
 			const parentEl = text.inputEl.parentElement;
 			if (!parentEl) {
-				console.warn('NoteNamer: Failed to create API key toggle button - parent element not found');
+				console.warn('TitleForge: Failed to create API key toggle button - parent element not found');
 				return;
 			}
 

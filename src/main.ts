@@ -1,12 +1,12 @@
 import { App, Notice, Plugin, TFile, parseYaml, stringifyYaml } from 'obsidian';
-import { NoteNamerSettings, DEFAULT_SETTINGS } from './settings';
-import { NoteNamerSettingTab } from './ui/setting-tab';
+import { TitleForgeSettings, DEFAULT_SETTINGS } from './settings';
+import { TitleForgeSettingTab } from './ui/setting-tab';
 import { TitleGenerator } from './services/title-generator';
 import { TagGenerator } from './services/tag-generator';
 import { validateApiKey, validateContent, arraysEqual } from './utils/validator';
 
-export default class NoteNamerPlugin extends Plugin {
-	settings: NoteNamerSettings;
+export default class TitleForgePlugin extends Plugin {
+	settings: TitleForgeSettings;
 	private titleGenerator: TitleGenerator;
 	private tagGenerator: TagGenerator;
 	private ribbonIconTitle: HTMLElement | null = null;
@@ -21,13 +21,13 @@ export default class NoteNamerPlugin extends Plugin {
 
 		// Add commands
 		this.addCommand({
-			id: 'note-namer-generate-title',
+			id: 'title-forge-generate-title',
 			name: 'Generate title with AI',
 			callback: () => this.generateTitle()
 		});
 
 		this.addCommand({
-			id: 'note-namer-generate-tags',
+			id: 'title-forge-generate-tags',
 			name: 'Generate tags with AI',
 			callback: () => this.generateTags()
 		});
@@ -38,7 +38,7 @@ export default class NoteNamerPlugin extends Plugin {
 		}
 
 		// Add settings tab
-		this.addSettingTab(new NoteNamerSettingTab(this.app, this));
+		this.addSettingTab(new TitleForgeSettingTab(this.app, this));
 	}
 
 	onunload() {

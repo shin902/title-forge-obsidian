@@ -1,6 +1,6 @@
 import { GeminiClient, GeminiConfig } from './gemini-client';
 import { normalizeTags, removeFrontmatter, truncateContent } from '../utils/text-sanitizer';
-import { NoteNamerSettings, GEMINI_MODEL } from '../settings';
+import { TitleForgeSettings, GEMINI_MODEL } from '../settings';
 
 export class TagGenerator {
 	private geminiClient: GeminiClient;
@@ -16,7 +16,7 @@ export class TagGenerator {
 	 * @returns Array of generated tags
 	 * @throws Error if generation fails
 	 */
-	async generateTags(content: string, settings: NoteNamerSettings): Promise<string[]> {
+	async generateTags(content: string, settings: TitleForgeSettings): Promise<string[]> {
 		// Remove frontmatter for tag generation
 		const contentWithoutFrontmatter = removeFrontmatter(content);
 
