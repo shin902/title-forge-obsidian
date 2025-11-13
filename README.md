@@ -63,7 +63,7 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 
 ### API設定
 - **Gemini API Key**: Gemini APIキー
-- **モデル**: 使用するGeminiモデル（デフォルト: gemini-2.0-flash-lite）
+- **モデル**: 使用するGeminiモデル（デフォルト: gemini-2.5-flash-lite）
 
 ### タイトル生成設定
 - **最大タイトル長**: タイトルの最大文字数（10-100）
