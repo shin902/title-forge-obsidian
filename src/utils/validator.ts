@@ -8,12 +8,12 @@ export function validateApiKey(apiKey: string): boolean {
 		return false;
 	}
 
-	// Gemini API keys should be at least 20 characters and start with "AI"
-	if (apiKey.length < 20 || !apiKey.startsWith('AI')) {
-		return false;
-	}
+	// Gemini API keys are typically "AIza" followed by 35 base64-like characters
+	// Total length: 39 characters
+	// Format: AIza[A-Za-z0-9_-]{35}
+	const apiKeyPattern = /^AIza[A-Za-z0-9_-]{35}$/;
 
-	return true;
+	return apiKeyPattern.test(apiKey);
 }
 
 /**

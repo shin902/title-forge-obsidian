@@ -5,6 +5,7 @@ import { validateApiKey } from '../utils/validator';
 export class NoteNamerSettingTab extends PluginSettingTab {
 	plugin: NoteNamerPlugin;
 	private validationMessage: HTMLElement | null = null;
+	private validationTimeout: ReturnType<typeof setTimeout> | null = null;
 	private toggleButtonListener: ((this: HTMLElement, ev: MouseEvent) => any) | null = null;
 	private toggleButton: HTMLElement | null = null;
 
@@ -15,22 +16,35 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 
 	// Cleanup method to prevent memory leaks
 	hide(): void {
-		this.cleanupEventListeners();
+		this.cleanup();
 	}
 
-	private cleanupEventListeners(): void {
+	private cleanup(): void {
+		// Clean up event listeners
 		if (this.toggleButton && this.toggleButtonListener) {
 			this.toggleButton.removeEventListener('click', this.toggleButtonListener);
 			this.toggleButtonListener = null;
 			this.toggleButton = null;
+		}
+
+		// Clean up validation message
+		if (this.validationMessage) {
+			this.validationMessage.remove();
+			this.validationMessage = null;
+		}
+
+		// Clean up validation timeout
+		if (this.validationTimeout) {
+			clearTimeout(this.validationTimeout);
+			this.validationTimeout = null;
 		}
 	}
 
 	display(): void {
 		const { containerEl } = this;
 
-		// Clean up any existing event listeners
-		this.cleanupEventListeners();
+		// Clean up any existing resources to prevent memory leaks
+		this.cleanup();
 
 		containerEl.empty();
 
@@ -61,19 +75,27 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 					this.plugin.settings.apiKey = value;
 					await this.plugin.saveSettings();
 
-					// Validate and show feedback using class scope
-					if (this.validationMessage) {
-						this.validationMessage.remove();
-						this.validationMessage = null;
+					// Debounce validation to prevent race conditions
+					if (this.validationTimeout) {
+						clearTimeout(this.validationTimeout);
 					}
 
-					if (value && !validateApiKey(value)) {
-						this.validationMessage = containerEl.createEl('div', {
-							text: '⚠️ APIキーの形式が正しくない可能性があります（20文字以上、"AI"で始まる必要があります）',
-							cls: 'setting-item-description mod-warning'
-						});
-						apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
-					}
+					this.validationTimeout = setTimeout(() => {
+						// Clear any existing validation message
+						if (this.validationMessage) {
+							this.validationMessage.remove();
+							this.validationMessage = null;
+						}
+
+						// Show validation feedback for invalid API keys
+						if (value && !validateApiKey(value)) {
+							this.validationMessage = containerEl.createEl('div', {
+								text: '⚠️ APIキーの形式が正しくない可能性があります（39文字、"AIza"で始まる必要があります）',
+								cls: 'setting-item-description mod-warning'
+							});
+							apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
+						}
+					}, 300);
 				});
 
 			// Set as password field
@@ -95,19 +117,22 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 			});
 
 			this.toggleButton.setAttribute('type', 'button');
-			this.toggleButton.setAttribute('aria-label', 'Toggle API key visibility');
-
-			// Add CSS class instead of inline styles
-			this.toggleButton.addClass('api-key-toggle-btn');
+			this.toggleButton.setAttribute('aria-label', 'Show API key');
 
 			// Store listener reference for cleanup
 			this.toggleButtonListener = () => {
 				if (text.inputEl.type === 'password') {
 					text.inputEl.type = 'text';
-					if (this.toggleButton) this.toggleButton.textContent = '🙈';
+					if (this.toggleButton) {
+						this.toggleButton.textContent = '🙈';
+						this.toggleButton.setAttribute('aria-label', 'Hide API key');
+					}
 				} else {
 					text.inputEl.type = 'password';
-					if (this.toggleButton) this.toggleButton.textContent = '👁️';
+					if (this.toggleButton) {
+						this.toggleButton.textContent = '👁️';
+						this.toggleButton.setAttribute('aria-label', 'Show API key');
+					}
 				}
 			};
 
