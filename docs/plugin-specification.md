@@ -172,9 +172,41 @@ title-forge-obsidian/
 └── esbuild.config.mjs
 ```
 
-### 3.5 ユーティリティ関数
+### 3.4.1 manifest.json
+```json
+{
+  "id": "title-forge",
+  "name": "TitleForge",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Forge perfect titles and tags for your notes with Gemini AI",
+  "author": "shin902",
+  "authorUrl": "https://github.com/shin902",
+  "isDesktopOnly": false
+}
+```
 
-#### 3.5.1 text-sanitizer.ts
+### 3.5 主要クラス
+
+#### 3.5.1 TitleForgePlugin (main.ts)
+- プラグインのメインクラス
+- コマンド登録、サービス初期化、設定管理を担当
+- `generateTitle()`: タイトル生成処理
+- `generateTags()`: タグ生成処理
+- `getTagsFromFrontmatter()`: Frontmatterからタグ取得
+- `updateTagsInFrontmatter()`: Frontmatterのタグ更新
+
+#### 3.5.2 TitleForgeSettingTab (ui/setting-tab.ts)
+- 設定画面UIクラス
+- `display()`: UI構築
+- `hide()`: リソースクリーンアップ（コンポーネントライフサイクル管理）
+- `cleanup()`: イベントリスナー、タイムアウト、DOM要素の解放
+- `showValidationWarning()`: バリデーションメッセージ表示
+- デバウンス定数: `VALIDATION_DEBOUNCE_MS = 300`
+
+### 3.6 ユーティリティ関数
+
+#### 3.6.1 text-sanitizer.ts
 
 **sanitizeTitle(title: string): string**
 - OS非互換文字（`/\:*?"<>|`）をスペースに置換
@@ -196,12 +228,14 @@ title-forge-obsidian/
 **removeFrontmatter(content: string): string**
 - YAML Frontmatter（`---`で囲まれた部分）を削除
 
-#### 3.5.2 validator.ts
+#### 3.6.2 validator.ts
 
 **validateApiKey(apiKey: string): boolean**
 - APIキーが空または空白のみの場合false
-- 長さが20文字未満の場合false
-- `AI`で始まらない場合false
+- 正規表現パターン `/^AI[A-Za-z0-9_-]{18,}$/` を使用して検証
+  - `AI`で始まること
+  - その後に18文字以上の英数字、アンダースコア、ハイフンが続くこと
+  - 合計で最低20文字以上
 
 **validateContent(content: string): boolean**
 - コンテンツが空または空白のみの場合false
@@ -271,19 +305,26 @@ title-forge-obsidian/
 ### 5.3 設定画面
 
 #### セクション構成
-1. **API設定**
-   - Gemini APIキー入力フィールド（password type）
+1. **プライバシー通知**
+   - Google Gemini APIへのデータ送信に関する警告
+   - APIキーのローカル保存に関する注意事項
+
+2. **API設定**
+   - Gemini APIキー入力フィールド（password type、autocomplete="off"）
+   - APIキー表示/非表示トグルボタン（👁️/🙈アイコン）
+   - リアルタイムバリデーション（300msデバウンス）
+     - 不正な形式の場合: `⚠️ APIキーの形式が正しくない可能性があります（"AI"で始まる20文字以上である必要があります）`
    - APIキー取得リンク: https://aistudio.google.com/app/apikey
 
-2. **タイトル生成設定**
+3. **タイトル生成設定**
    - 最大文字数スライダー（10-100）
    - Temperature スライダー（0.0-1.0）
 
-3. **タグ生成設定**
+4. **タグ生成設定**
    - Temperature スライダー（0.0-1.0）
    - 最大コンテンツ長スライダー（50-500）
 
-4. **表示設定**
+5. **表示設定**
    - リボンアイコン表示トグル
    - 通知表示トグル
 
@@ -318,20 +359,40 @@ title-forge-obsidian/
 ## 7. セキュリティとプライバシー
 
 ### 7.1 APIキーの管理
-- APIキーはObsidianのプラグインデータとして暗号化保存
+- APIキーはObsidianのプラグインデータとして暗号化保存（data.json）
 - 設定画面ではパスワードフィールドとして表示
+- `autocomplete="off"` 属性でブラウザの自動入力を無効化
+- 表示/非表示トグルボタンによる視認性制御
+- リアルタイムバリデーション（正規表現パターンによる形式チェック）
 - ログやコンソール出力にAPIキーを含めない
 
-### 7.2 データ送信
+### 7.2 XSS対策
+- `innerHTML`を使用せず、DOM APIメソッド（`createEl()`, `appendText()`）を使用
+- 外部リンクには`rel="noopener noreferrer"`属性を設定
+- ユーザー入力値は適切にエスケープ・サニタイズ
+
+### 7.3 メモリリーク対策
+- 設定タブの`hide()`メソッドで適切なクリーンアップを実施
+- イベントリスナーの明示的な削除
+- タイムアウトとDOM要素の適切な解放
+- `cleanup()`メソッドによる統一的なリソース管理
+
+### 7.4 レースコンディション対策
+- バリデーションのデバウンス処理（300ms）
+- `isMounted`フラグによるコンポーネントライフサイクル管理
+- 非同期処理の適切な順序制御
+
+### 7.5 データ送信
 - ノート本文をGemini APIに送信（ユーザーの同意前提）
 - 送信データは一時的な処理のみに使用（Googleの利用規約に従う）
 - ローカルVault以外にデータを保存しない
 
-### 7.3 プライバシー通知
-初回起動時、または設定画面に以下の注意事項を表示：
+### 7.6 プライバシー通知
+設定画面に以下の注意事項を表示：
 ```
-このプラグインは、ノートの内容をGoogle Gemini APIに送信します。
-機密情報を含むノートでの使用にはご注意ください。
+プライバシーに関する注意:
+• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。
+• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。
 ```
 
 ---
@@ -437,6 +498,6 @@ MIT License（予定）
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 2.0
 **Last Updated**: 2025-11-13
-**Author**: Development Team
+**Author**: shin902
