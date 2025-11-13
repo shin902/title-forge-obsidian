@@ -1,10 +1,10 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import NoteNamerPlugin from '../main';
+import TitleForgePlugin from '../main';
 
-export class NoteNamerSettingTab extends PluginSettingTab {
-	plugin: NoteNamerPlugin;
+export class TitleForgeSettingTab extends PluginSettingTab {
+	plugin: TitleForgePlugin;
 
-	constructor(app: App, plugin: NoteNamerPlugin) {
+	constructor(app: App, plugin: TitleForgePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

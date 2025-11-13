@@ -1,9 +1,9 @@
-# Obsidian Note Namer プラグイン仕様書
+# Obsidian TitleForge プラグイン仕様書
 
 ## 1. 概要
 
 ### 1.1 プラグイン名
-**Note Namer** (仮称)
+**TitleForge**
 
 ### 1.2 目的
 Gemini APIを活用して、Obsidianノートのタイトル自動生成とタグ自動追加を行い、ノートの整理と検索性を向上させる。
@@ -149,7 +149,7 @@ Content:
 ### 3.4 プラグイン構造
 
 ```
-note-namer-obsidian/
+title-forge-obsidian/
 ├── src/
 │   ├── main.ts                 # プラグインメインファイル
 │   ├── settings.ts             # 設定管理
@@ -206,7 +206,7 @@ note-namer-obsidian/
 ### 5.1 コマンド
 
 #### 5.1.1 タイトル生成コマンド
-- **ID**: `note-namer-generate-title`
+- **ID**: `title-forge-generate-title`
 - **名称**: "Generate title with AI"
 - **実行条件**: アクティブなMarkdownファイルが存在すること
 - **フィードバック**:
@@ -215,7 +215,7 @@ note-namer-obsidian/
   - エラー時: エラー内容を通知
 
 #### 5.1.2 タグ生成コマンド
-- **ID**: `note-namer-generate-tags`
+- **ID**: `title-forge-generate-tags`
 - **名称**: "Generate tags with AI"
 - **実行条件**: アクティブなMarkdownファイルが存在すること
 - **フィードバック**:
