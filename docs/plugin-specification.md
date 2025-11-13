@@ -40,6 +40,8 @@ Gemini APIを活用して、Obsidianノートのタイトル自動生成とタ�
 - 記号や絵文字を使用しない
 - 汎用的な接頭辞（「メモ」「ノート」「日記」など）を付けない
 - OS非互換文字（`/\:*?"<>|`）は自動的にスペースに置換
+- 連続する複数のスペースは単一スペースに変換
+- 前後の空白は削除
 - 重複時は自動的に連番を付与（例: `タイトル - 2.md`）
 
 #### 2.1.5 実行方法
@@ -65,9 +67,11 @@ Gemini APIを活用して、Obsidianノートのタイトル自動生成とタ�
 
 #### 2.2.4 タグ生成ルール
 - カンマ区切りで複数タグを生成
-- 複数単語はハイフン（`-`）で連結
-- すべて小文字に正規化
+- 各タグの前後の空白を削除
 - `#`記号は自動削除
+- すべて小文字に正規化
+- 複数単語間のスペースはハイフン（`-`）に変換
+- 空のタグは除去
 - 重複タグは除去
 - 既存タグは完全置き換え（追加ではない）
 
@@ -149,18 +153,17 @@ Content:
 ### 3.4 プラグイン構造
 
 ```
-note-namer-obsidian/
+title-forge-obsidian/
 ├── src/
 │   ├── main.ts                 # プラグインメインファイル
-│   ├── settings.ts             # 設定管理
+│   ├── settings.ts             # 設定管理（GEMINI_MODEL定数含む）
 │   ├── services/
 │   │   ├── gemini-client.ts    # Gemini API クライアント
 │   │   ├── title-generator.ts  # タイトル生成ロジック
 │   │   └── tag-generator.ts    # タグ生成ロジック
 │   ├── utils/
-│   │   ├── env-loader.ts       # 環境変数読み込み
-│   │   ├── text-sanitizer.ts   # テキスト正規化
-│   │   └── validator.ts        # バリデーション
+│   │   ├── text-sanitizer.ts   # テキスト正規化・サニタイズ
+│   │   └── validator.ts        # バリデーション（APIキー・コンテンツ）
 │   └── ui/
 │       └── setting-tab.ts      # 設定UI
 ├── manifest.json
@@ -168,6 +171,43 @@ note-namer-obsidian/
 ├── tsconfig.json
 └── esbuild.config.mjs
 ```
+
+### 3.5 ユーティリティ関数
+
+#### 3.5.1 text-sanitizer.ts
+
+**sanitizeTitle(title: string): string**
+- OS非互換文字（`/\:*?"<>|`）をスペースに置換
+- 連続する複数のスペースを単一スペースに変換
+- 前後の空白を削除
+
+**normalizeTags(tags: string | string[]): string[]**
+- カンマ区切り文字列または配列を受け入れ
+- 各タグの前後の空白を削除
+- `#`記号を削除
+- すべて小文字に変換
+- スペースをハイフンに変換
+- 空のタグを除去
+- 重複を除去
+
+**truncateContent(content: string, maxLength: number): string**
+- 指定した最大長でコンテンツを切り詰め
+
+**removeFrontmatter(content: string): string**
+- YAML Frontmatter（`---`で囲まれた部分）を削除
+
+#### 3.5.2 validator.ts
+
+**validateApiKey(apiKey: string): boolean**
+- APIキーが空または空白のみの場合false
+- 長さが20文字未満の場合false
+- `AI`で始まらない場合false
+
+**validateContent(content: string): boolean**
+- コンテンツが空または空白のみの場合false
+
+**arraysEqual(arr1: string[], arr2: string[]): boolean**
+- 2つの配列がソート後に等しいか比較（冪等性チェック用）
 
 ---
 
@@ -255,10 +295,10 @@ note-namer-obsidian/
 
 | エラー種別 | 条件 | メッセージ |
 |-----------|------|-----------|
-| APIキー未設定 | APIキーが空または未設定 | `GEMINI_API_KEY が未設定です。設定画面でAPIキーを入力してください。` |
-| APIキー不正 | キー形式が不正（長さ<20、`AI`で始まらない） | `Gemini APIキーの形式が不正です。正しいキーを設定してください。` |
-| API呼び出し失敗 | HTTPステータス≠200 | `Gemini API エラー: {status} {response}` |
-| レスポンス解析失敗 | 応答から結果を抽出できない | `タイトル/タグ生成に失敗しました。` |
+| APIキー未設定 | APIキーが空または空白のみ | `GEMINI_API_KEY が未設定または不正です。設定画面でAPIキーを入力してください。` |
+| APIキー不正 | 長さが20文字未満、または`AI`で始まらない | `GEMINI_API_KEY が未設定または不正です。設定画面でAPIキーを入力してください。` |
+| API呼び出し失敗 | HTTPステータス≠200 | `Gemini APIエラー: {status} {response}` |
+| レスポンス解析失敗 | 応答から結果を抽出できない | `Gemini APIからのレスポンスを解析できませんでした。` |
 
 ### 6.2 ファイル操作エラー
 
@@ -397,6 +437,6 @@ MIT License（予定）
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-10
+**Document Version**: 1.1
+**Last Updated**: 2025-11-13
 **Author**: Development Team
