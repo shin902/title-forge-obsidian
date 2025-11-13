@@ -62,8 +62,7 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 ## 設定項目
 
 ### API設定
-- **Gemini API Key**: Gemini APIキー
-- **モデル**: 使用するGeminiモデル（デフォルト: gemini-2.5-flash-lite）
+- **Gemini API Key**: Gemini APIキー（リアルタイムバリデーション付き）
 
 ### タイトル生成設定
 - **最大タイトル長**: タイトルの最大文字数（10-100）
@@ -104,6 +103,8 @@ MIT
 ## プライバシーについて
 
 このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。
+
+APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。
 
 ## ドキュメント
 
