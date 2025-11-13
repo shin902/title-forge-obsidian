@@ -1,6 +1,6 @@
 import { GeminiClient, GeminiConfig } from './gemini-client';
 import { sanitizeTitle } from '../utils/text-sanitizer';
-import { NoteNamerSettings, GEMINI_MODEL } from '../settings';
+import { TitleForgeSettings, GEMINI_MODEL } from '../settings';
 
 export class TitleGenerator {
 	private geminiClient: GeminiClient;
@@ -16,7 +16,7 @@ export class TitleGenerator {
 	 * @returns Generated title
 	 * @throws Error if generation fails
 	 */
-	async generateTitle(content: string, settings: NoteNamerSettings): Promise<string> {
+	async generateTitle(content: string, settings: TitleForgeSettings): Promise<string> {
 		const prompt = this.buildPrompt(content, settings.maxTitleLength);
 
 		const config: GeminiConfig = {

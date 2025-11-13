@@ -1,49 +1,211 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import NoteNamerPlugin from '../main';
+import TitleForgePlugin from '../main';
+import { validateApiKey } from '../utils/validator';
 
-export class NoteNamerSettingTab extends PluginSettingTab {
-	plugin: NoteNamerPlugin;
+export class TitleForgeSettingTab extends PluginSettingTab {
+	plugin: TitleForgePlugin;
+	private validationMessage: HTMLElement | null = null;
+	private validationTimeout: ReturnType<typeof setTimeout> | null = null;
+	private toggleButtonListener: (() => void) | null = null;
+	private toggleButton: HTMLElement | null = null;
+	private toggleContainer: HTMLElement | null = null;
+	private isMounted: boolean = false;
 
-	constructor(app: App, plugin: NoteNamerPlugin) {
+	// Validation debounce delay in milliseconds
+	private static readonly VALIDATION_DEBOUNCE_MS = 300;
+
+	constructor(app: App, plugin: TitleForgePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	/**
+	 * Cleanup method to prevent memory leaks
+	 * Called when settings tab is hidden or re-rendered
+	 */
+	hide(): void {
+		this.isMounted = false;
+		this.cleanup();
+	}
+
+	/**
+	 * Cleans up all resources: event listeners, DOM elements, and timeouts
+	 */
+	private cleanup(): void {
+		// Clean up validation timeout first to prevent race conditions
+		if (this.validationTimeout) {
+			clearTimeout(this.validationTimeout);
+			this.validationTimeout = null;
+		}
+
+		// Clean up toggle button and its container
+		if (this.toggleContainer) {
+			// Remove event listener before removing from DOM
+			if (this.toggleButton && this.toggleButtonListener) {
+				this.toggleButton.removeEventListener('click', this.toggleButtonListener);
+			}
+			this.toggleContainer.remove();
+			this.toggleContainer = null;
+			this.toggleButton = null;
+			this.toggleButtonListener = null;
+		}
+
+		// Clean up validation message
+		if (this.validationMessage) {
+			this.validationMessage.remove();
+			this.validationMessage = null;
+		}
+	}
+
+	/**
+	 * Shows a validation warning message for API key
+	 * @param message - The warning message to display
+	 * @param settingEl - The setting element to insert the message after
+	 */
+	private showValidationWarning(message: string, settingEl: HTMLElement): void {
+		// Clear any existing validation message
+		if (this.validationMessage) {
+			this.validationMessage.remove();
+			this.validationMessage = null;
+		}
+
+		// Create new validation message
+		this.validationMessage = settingEl.parentElement?.createEl('div', {
+			text: message,
+			cls: 'setting-item-description mod-warning'
+		}) || null;
+
+		if (this.validationMessage) {
+			settingEl.insertAdjacentElement('afterend', this.validationMessage);
+		}
 	}
 
 	display(): void {
 		const { containerEl } = this;
 
+		// Clean up any existing resources to prevent memory leaks
+		this.cleanup();
+
+		// Mark as mounted
+		this.isMounted = true;
+
 		containerEl.empty();
 
-		// Privacy Notice
-		containerEl.createEl('div', {
-			text: 'このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。',
+		// Privacy Notice - Fixed XSS vulnerability by using DOM methods instead of innerHTML
+		const privacyNotice = containerEl.createEl('div', {
 			cls: 'setting-item-description'
 		});
+		privacyNotice.createEl('strong', { text: 'プライバシーに関する注意:' });
+		privacyNotice.createEl('br');
+		privacyNotice.appendText('• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。');
+		privacyNotice.createEl('br');
+		privacyNotice.appendText('• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。');
 
 		containerEl.createEl('br');
 
 		// API Settings Section
 		containerEl.createEl('h2', { text: 'API設定' });
 
-		new Setting(containerEl)
+		const apiKeySetting = new Setting(containerEl)
 			.setName('Gemini API Key')
-			.setDesc('Gemini APIキーを入力してください')
-			.addText(text => {
-				text
-					.setPlaceholder('AIza...')
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.type = 'password';
+			.setDesc('Gemini APIキーを入力してください');
+
+		apiKeySetting.addText(text => {
+			text
+				.setPlaceholder('AIza...')
+				.setValue(this.plugin.settings.apiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.apiKey = value;
+					await this.plugin.saveSettings();
+
+					// Debounce validation to prevent race conditions
+					if (this.validationTimeout) {
+						clearTimeout(this.validationTimeout);
+					}
+
+					this.validationTimeout = setTimeout(() => {
+						// Check if tab is still mounted to prevent race condition
+						if (!this.isMounted) {
+							return;
+						}
+
+						// Show validation feedback for invalid API keys
+						if (value && !validateApiKey(value)) {
+							this.showValidationWarning(
+								'⚠️ APIキーの形式が正しくない可能性があります（"AI"で始まる20文字以上である必要があります）',
+								apiKeySetting.settingEl
+							);
+						} else if (this.validationMessage) {
+							// Clear validation message when key becomes valid
+							this.validationMessage.remove();
+							this.validationMessage = null;
+						}
+					}, TitleForgeSettingTab.VALIDATION_DEBOUNCE_MS);
+				});
+
+			// Set as password field
+			text.inputEl.type = 'password';
+
+			// Disable autocomplete
+			text.inputEl.setAttribute('autocomplete', 'off');
+
+			// Add visibility toggle button with proper cleanup
+			const parentEl = text.inputEl.parentElement;
+			if (!parentEl) {
+				// Log error but continue - toggle button is optional enhancement
+				console.error('TitleForge: Cannot create API key toggle button - parent element not found. This should not happen.');
+				// Continue without toggle button - field is still functional
+				return;
+			}
+
+			// Create a container for the toggle button to ensure proper cleanup
+			this.toggleContainer = parentEl.createEl('span', {
+				cls: 'api-key-toggle-container'
 			});
 
-		// Add link to get API key
+			this.toggleButton = this.toggleContainer.createEl('button', {
+				text: '👁️',
+				cls: 'api-key-toggle-btn'
+			});
+
+			this.toggleButton.setAttribute('type', 'button');
+			this.toggleButton.setAttribute('aria-label', 'Show API key');
+
+			// Store listener reference for cleanup
+			this.toggleButtonListener = () => {
+				if (text.inputEl.type === 'password') {
+					text.inputEl.type = 'text';
+					if (this.toggleButton) {
+						this.toggleButton.textContent = '🙈';
+						this.toggleButton.setAttribute('aria-label', 'Hide API key');
+					}
+				} else {
+					text.inputEl.type = 'password';
+					if (this.toggleButton) {
+						this.toggleButton.textContent = '👁️';
+						this.toggleButton.setAttribute('aria-label', 'Show API key');
+					}
+				}
+			};
+
+			this.toggleButton.addEventListener('click', this.toggleButtonListener);
+
+			// Note: Initial validation on load removed to avoid distracting users
+			// who are about to fix their API key. Validation will trigger on first keystroke.
+		});
+
+		// Add link to get API key - Fixed XSS vulnerability
 		const apiKeyDesc = containerEl.createEl('div', {
 			cls: 'setting-item-description'
 		});
-		apiKeyDesc.innerHTML = 'APIキーは<a href="https://aistudio.google.com/app/apikey" target="_blank">こちら</a>から取得できます';
+		apiKeyDesc.appendText('APIキーは');
+		const link = apiKeyDesc.createEl('a', {
+			text: 'こちら',
+			href: 'https://aistudio.google.com/app/apikey'
+		});
+		link.setAttribute('target', '_blank');
+		link.setAttribute('rel', 'noopener noreferrer');
+		apiKeyDesc.appendText('から取得できます');
 
 		// Title Generation Settings Section
 		containerEl.createEl('h2', { text: 'タイトル生成設定' });

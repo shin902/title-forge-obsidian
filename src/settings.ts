@@ -1,7 +1,7 @@
 // Fixed Gemini model (no longer configurable)
 export const GEMINI_MODEL = 'gemini-2.5-flash-lite' as const;
 
-export interface NoteNamerSettings {
+export interface TitleForgeSettings {
 	// API Settings
 	apiKey: string;
 
@@ -20,7 +20,7 @@ export interface NoteNamerSettings {
 	enableNotifications: boolean;
 }
 
-export const DEFAULT_SETTINGS: NoteNamerSettings = {
+export const DEFAULT_SETTINGS: TitleForgeSettings = {
 	// API Settings
 	apiKey: '',
 
