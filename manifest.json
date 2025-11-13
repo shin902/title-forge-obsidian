@@ -4,8 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Forge perfect titles and tags for your notes with Gemini AI",
-	"author": "Development Team",
-	"authorUrl": "",
-	"fundingUrl": "",
+	"author": "shin902",
+	"authorUrl": "https://github.com/shin902",
 	"isDesktopOnly": false
 }
