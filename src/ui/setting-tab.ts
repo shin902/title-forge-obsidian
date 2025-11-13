@@ -4,25 +4,45 @@ import { validateApiKey } from '../utils/validator';
 
 export class NoteNamerSettingTab extends PluginSettingTab {
 	plugin: NoteNamerPlugin;
+	private validationMessage: HTMLElement | null = null;
+	private toggleButtonListener: ((this: HTMLElement, ev: MouseEvent) => any) | null = null;
+	private toggleButton: HTMLElement | null = null;
 
 	constructor(app: App, plugin: NoteNamerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
+	// Cleanup method to prevent memory leaks
+	hide(): void {
+		this.cleanupEventListeners();
+	}
+
+	private cleanupEventListeners(): void {
+		if (this.toggleButton && this.toggleButtonListener) {
+			this.toggleButton.removeEventListener('click', this.toggleButtonListener);
+			this.toggleButtonListener = null;
+			this.toggleButton = null;
+		}
+	}
+
 	display(): void {
 		const { containerEl } = this;
 
+		// Clean up any existing event listeners
+		this.cleanupEventListeners();
+
 		containerEl.empty();
 
-		// Privacy Notice
+		// Privacy Notice - Fixed XSS vulnerability by using DOM methods instead of innerHTML
 		const privacyNotice = containerEl.createEl('div', {
 			cls: 'setting-item-description'
 		});
-		privacyNotice.innerHTML =
-			'<strong>プライバシーに関する注意:</strong><br>' +
-			'• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。<br>' +
-			'• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。';
+		privacyNotice.createEl('strong', { text: 'プライバシーに関する注意:' });
+		privacyNotice.createEl('br');
+		privacyNotice.appendText('• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。');
+		privacyNotice.createEl('br');
+		privacyNotice.appendText('• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。');
 
 		containerEl.createEl('br');
 
@@ -33,8 +53,6 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 			.setName('Gemini API Key')
 			.setDesc('Gemini APIキーを入力してください');
 
-		let validationMessage: HTMLElement | null = null;
-
 		apiKeySetting.addText(text => {
 			text
 				.setPlaceholder('AIza...')
@@ -43,18 +61,18 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 					this.plugin.settings.apiKey = value;
 					await this.plugin.saveSettings();
 
-					// Validate and show feedback
-					if (validationMessage) {
-						validationMessage.remove();
-						validationMessage = null;
+					// Validate and show feedback using class scope
+					if (this.validationMessage) {
+						this.validationMessage.remove();
+						this.validationMessage = null;
 					}
 
 					if (value && !validateApiKey(value)) {
-						validationMessage = containerEl.createEl('div', {
+						this.validationMessage = containerEl.createEl('div', {
 							text: '⚠️ APIキーの形式が正しくない可能性があります（20文字以上、"AI"で始まる必要があります）',
 							cls: 'setting-item-description mod-warning'
 						});
-						apiKeySetting.settingEl.insertAdjacentElement('afterend', validationMessage);
+						apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
 					}
 				});
 
@@ -64,39 +82,60 @@ export class NoteNamerSettingTab extends PluginSettingTab {
 			// Disable autocomplete
 			text.inputEl.setAttribute('autocomplete', 'off');
 
-			// Add visibility toggle button
-			const toggleBtn = text.inputEl.parentElement?.createEl('button', {
+			// Add visibility toggle button with proper cleanup
+			const parentEl = text.inputEl.parentElement;
+			if (!parentEl) {
+				console.warn('NoteNamer: Failed to create API key toggle button - parent element not found');
+				return;
+			}
+
+			this.toggleButton = parentEl.createEl('button', {
 				text: '👁️',
 				cls: 'api-key-toggle-btn'
 			});
 
-			if (toggleBtn) {
-				toggleBtn.setAttribute('type', 'button');
-				toggleBtn.setAttribute('aria-label', 'Toggle API key visibility');
-				toggleBtn.style.marginLeft = '8px';
-				toggleBtn.style.cursor = 'pointer';
-				toggleBtn.style.padding = '4px 8px';
-				toggleBtn.style.border = '1px solid var(--background-modifier-border)';
-				toggleBtn.style.borderRadius = '4px';
-				toggleBtn.style.background = 'var(--interactive-normal)';
+			this.toggleButton.setAttribute('type', 'button');
+			this.toggleButton.setAttribute('aria-label', 'Toggle API key visibility');
 
-				toggleBtn.addEventListener('click', () => {
-					if (text.inputEl.type === 'password') {
-						text.inputEl.type = 'text';
-						toggleBtn.textContent = '🙈';
-					} else {
-						text.inputEl.type = 'password';
-						toggleBtn.textContent = '👁️';
-					}
+			// Add CSS class instead of inline styles
+			this.toggleButton.addClass('api-key-toggle-btn');
+
+			// Store listener reference for cleanup
+			this.toggleButtonListener = () => {
+				if (text.inputEl.type === 'password') {
+					text.inputEl.type = 'text';
+					if (this.toggleButton) this.toggleButton.textContent = '🙈';
+				} else {
+					text.inputEl.type = 'password';
+					if (this.toggleButton) this.toggleButton.textContent = '👁️';
+				}
+			};
+
+			this.toggleButton.addEventListener('click', this.toggleButtonListener);
+
+			// Show initial validation if API key is invalid
+			const currentKey = this.plugin.settings.apiKey;
+			if (currentKey && !validateApiKey(currentKey)) {
+				this.validationMessage = containerEl.createEl('div', {
+					text: '⚠️ 保存されているAPIキーの形式が正しくない可能性があります',
+					cls: 'setting-item-description mod-warning'
 				});
+				apiKeySetting.settingEl.insertAdjacentElement('afterend', this.validationMessage);
 			}
 		});
 
-		// Add link to get API key
+		// Add link to get API key - Fixed XSS vulnerability
 		const apiKeyDesc = containerEl.createEl('div', {
 			cls: 'setting-item-description'
 		});
-		apiKeyDesc.innerHTML = 'APIキーは<a href="https://aistudio.google.com/app/apikey" target="_blank">こちら</a>から取得できます';
+		apiKeyDesc.appendText('APIキーは');
+		const link = apiKeyDesc.createEl('a', {
+			text: 'こちら',
+			href: 'https://aistudio.google.com/app/apikey'
+		});
+		link.setAttribute('target', '_blank');
+		link.setAttribute('rel', 'noopener noreferrer');
+		apiKeyDesc.appendText('から取得できます');
 
 		// Title Generation Settings Section
 		containerEl.createEl('h2', { text: 'タイトル生成設定' });

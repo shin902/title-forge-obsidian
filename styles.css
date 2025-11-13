@@ -1,0 +1,20 @@
+/* Note Namer Plugin Styles */
+
+/* API Key Toggle Button */
+.api-key-toggle-btn {
+	margin-left: 8px;
+	cursor: pointer;
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--interactive-normal);
+	transition: background-color 0.2s ease;
+}
+
+.api-key-toggle-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.api-key-toggle-btn:active {
+	background: var(--interactive-active);
+}
