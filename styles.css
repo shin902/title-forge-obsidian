@@ -1,5 +1,11 @@
 /* Note Namer Plugin Styles */
 
+/* API Key Toggle Container */
+.api-key-toggle-container {
+	display: inline-block;
+	vertical-align: middle;
+}
+
 /* API Key Toggle Button
  * Uses Obsidian CSS variables for theme compatibility
  */

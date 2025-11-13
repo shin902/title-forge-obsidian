@@ -8,6 +8,8 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 	private validationTimeout: ReturnType<typeof setTimeout> | null = null;
 	private toggleButtonListener: (() => void) | null = null;
 	private toggleButton: HTMLElement | null = null;
+	private toggleContainer: HTMLElement | null = null;
+	private isMounted: boolean = false;
 
 	// Validation debounce delay in milliseconds
 	private static readonly VALIDATION_DEBOUNCE_MS = 300;
@@ -17,31 +19,41 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	// Cleanup method to prevent memory leaks
+	/**
+	 * Cleanup method to prevent memory leaks
+	 * Called when settings tab is hidden or re-rendered
+	 */
 	hide(): void {
+		this.isMounted = false;
 		this.cleanup();
 	}
 
+	/**
+	 * Cleans up all resources: event listeners, DOM elements, and timeouts
+	 */
 	private cleanup(): void {
-		// Clean up event listeners
-		if (this.toggleButton && this.toggleButtonListener) {
-			this.toggleButton.removeEventListener('click', this.toggleButtonListener);
-			// Remove button from DOM to prevent orphaned elements
-			this.toggleButton.remove();
-			this.toggleButtonListener = null;
+		// Clean up validation timeout first to prevent race conditions
+		if (this.validationTimeout) {
+			clearTimeout(this.validationTimeout);
+			this.validationTimeout = null;
+		}
+
+		// Clean up toggle button and its container
+		if (this.toggleContainer) {
+			// Remove event listener before removing from DOM
+			if (this.toggleButton && this.toggleButtonListener) {
+				this.toggleButton.removeEventListener('click', this.toggleButtonListener);
+			}
+			this.toggleContainer.remove();
+			this.toggleContainer = null;
 			this.toggleButton = null;
+			this.toggleButtonListener = null;
 		}
 
 		// Clean up validation message
 		if (this.validationMessage) {
 			this.validationMessage.remove();
 			this.validationMessage = null;
-		}
-
-		// Clean up validation timeout
-		if (this.validationTimeout) {
-			clearTimeout(this.validationTimeout);
-			this.validationTimeout = null;
 		}
 	}
 
@@ -73,6 +85,9 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 
 		// Clean up any existing resources to prevent memory leaks
 		this.cleanup();
+
+		// Mark as mounted
+		this.isMounted = true;
 
 		containerEl.empty();
 
@@ -109,6 +124,11 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 					}
 
 					this.validationTimeout = setTimeout(() => {
+						// Check if tab is still mounted to prevent race condition
+						if (!this.isMounted) {
+							return;
+						}
+
 						// Show validation feedback for invalid API keys
 						if (value && !validateApiKey(value)) {
 							this.showValidationWarning(
@@ -132,11 +152,18 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 			// Add visibility toggle button with proper cleanup
 			const parentEl = text.inputEl.parentElement;
 			if (!parentEl) {
-				console.warn('TitleForge: Failed to create API key toggle button - parent element not found');
+				// Log error but continue - toggle button is optional enhancement
+				console.error('TitleForge: Cannot create API key toggle button - parent element not found. This should not happen.');
+				// Continue without toggle button - field is still functional
 				return;
 			}
 
-			this.toggleButton = parentEl.createEl('button', {
+			// Create a container for the toggle button to ensure proper cleanup
+			this.toggleContainer = parentEl.createEl('span', {
+				cls: 'api-key-toggle-container'
+			});
+
+			this.toggleButton = this.toggleContainer.createEl('button', {
 				text: '👁️',
 				cls: 'api-key-toggle-btn'
 			});
@@ -163,14 +190,8 @@ export class TitleForgeSettingTab extends PluginSettingTab {
 
 			this.toggleButton.addEventListener('click', this.toggleButtonListener);
 
-			// Show initial validation if API key is invalid
-			const currentKey = this.plugin.settings.apiKey;
-			if (currentKey && !validateApiKey(currentKey)) {
-				this.showValidationWarning(
-					'⚠️ 保存されているAPIキーの形式が正しくない可能性があります',
-					apiKeySetting.settingEl
-				);
-			}
+			// Note: Initial validation on load removed to avoid distracting users
+			// who are about to fix their API key. Validation will trigger on first keystroke.
 		});
 
 		// Add link to get API key - Fixed XSS vulnerability
