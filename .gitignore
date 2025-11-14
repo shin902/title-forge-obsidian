@@ -19,3 +19,14 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Environment variables and secrets
+.env
+.env.*
+*.key
+*.pem
+config.local.json
+
+# Test coverage
+coverage/
+.nyc_output/
