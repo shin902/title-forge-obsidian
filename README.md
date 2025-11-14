@@ -62,8 +62,7 @@ Obsidianプラグイン：Gemini AIを使ってノートのタイトル自動生
 ## 設定項目
 
 ### API設定
-- **Gemini API Key**: Gemini APIキー
-- **モデル**: 使用するGeminiモデル（デフォルト: gemini-2.5-flash-lite）
+- **Gemini API Key**: Gemini APIキー（リアルタイムバリデーション付き）
 
 ### タイトル生成設定
 - **最大タイトル長**: タイトルの最大文字数（10-100）
@@ -101,9 +100,46 @@ npm run build
 
 MIT
 
-## プライバシーについて
+## プライバシーとセキュリティ
+
+### データの取り扱い
 
 このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。
+
+APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。
+
+### セキュリティベストプラクティス
+
+#### APIキーの管理
+
+1. **定期的なキーのローテーション**
+   - 定期的に新しいAPIキーを生成し、古いキーを無効化することを推奨します
+   - [Google AI Studio](https://aistudio.google.com/app/apikey)でキーの管理が可能です
+
+2. **キーが漏洩した場合の対処**
+   - すぐに[Google AI Studio](https://aistudio.google.com/app/apikey)で該当キーを無効化
+   - 新しいキーを生成して設定を更新
+   - 必要に応じてGoogle Cloudコンソールで使用状況を確認
+
+3. **Vaultの同期に関する注意**
+   - `.obsidian/plugins/title-forge/data.json` にはAPIキーが平文で保存されます
+   - Vaultを公開リポジトリに同期しないでください
+   - クラウド同期を使用する場合は、共有相手を信頼できる人に限定してください
+
+#### Gitリポジトリでの管理
+
+Vaultをgitで管理している場合は、以下のファイルを`.gitignore`に追加することを強く推奨します：
+
+```gitignore
+# Obsidian plugin data (contains API keys)
+.obsidian/plugins/*/data.json
+```
+
+#### Obsidian Syncを使用する場合
+
+Obsidian Syncで設定を同期する場合：
+- 信頼できるデバイス間でのみ同期してください
+- 共有Vaultを使用する場合は、APIキーを含む設定の同期に注意してください
 
 ## ドキュメント
 

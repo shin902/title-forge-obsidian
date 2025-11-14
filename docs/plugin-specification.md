@@ -94,7 +94,7 @@ Gemini APIを活用して、Obsidianノートのタイトル自動生成とタ�
 ### 3.2 外部API
 
 #### 3.2.1 Gemini API
-- **モデル**: `gemini-2.5-flash-lite`（デフォルト、設定で変更可能）
+- **モデル**: `gemini-2.5-flash-lite`（固定、変更不可）
 - **エンドポイント**: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
 - **認証**: API Key方式
 
@@ -176,8 +176,7 @@ title-forge-obsidian/
 ### 4.1 API設定
 | 設定項目 | デフォルト値 | 説明 |
 |---------|-------------|------|
-| `apiKey` | （空文字列） | Gemini API キー |
-| `model` | `gemini-2.5-flash-lite` | 使用するGeminiモデル |
+| `apiKey` | （空文字列） | Gemini API キー（バリデーション機能付き） |
 
 ### 4.2 タイトル生成設定
 | 設定項目 | デフォルト値 | 説明 |
@@ -232,8 +231,9 @@ title-forge-obsidian/
 #### セクション構成
 1. **API設定**
    - Gemini APIキー入力フィールド（password type）
+   - APIキーの表示/非表示トグルボタン（👁️/🙈）
+   - リアルタイムバリデーション（300msデバウンス）
    - APIキー取得リンク: https://aistudio.google.com/app/apikey
-   - モデル選択ドロップダウン
 
 2. **タイトル生成設定**
    - 最大文字数スライダー（10-100）
@@ -278,9 +278,15 @@ title-forge-obsidian/
 ## 7. セキュリティとプライバシー
 
 ### 7.1 APIキーの管理
-- APIキーはObsidianのプラグインデータとして暗号化保存
-- 設定画面ではパスワードフィールドとして表示
+- APIキーはObsidianのプラグインデータ（data.json）としてローカル保存
+- 設定画面ではパスワードフィールドとして表示（表示/非表示トグル機能付き）
+- リアルタイムバリデーション機能
+  - パターン: `^AI[-A-Za-z0-9_]{18,}$`
+  - "AI"で始まり、その後に18文字以上の英数字、ハイフン、アンダースコアが続く
+  - 合計20文字以上
+  - 注: ハイフンは文字クラスの先頭に配置し、正規表現の曖昧性を回避
 - ログやコンソール出力にAPIキーを含めない
+- Autocomplete無効化によるセキュリティ向上
 
 ### 7.2 データ送信
 - ノート本文をGemini APIに送信（ユーザーの同意前提）
@@ -288,10 +294,11 @@ title-forge-obsidian/
 - ローカルVault以外にデータを保存しない
 
 ### 7.3 プライバシー通知
-初回起動時、または設定画面に以下の注意事項を表示：
+設定画面の最上部に以下の注意事項を常時表示：
 ```
-このプラグインは、ノートの内容をGoogle Gemini APIに送信します。
-機密情報を含むノートでの使用にはご注意ください。
+プライバシーに関する注意:
+• このプラグインは、ノートの内容をGoogle Gemini APIに送信します。機密情報を含むノートでの使用にはご注意ください。
+• APIキーはObsidianのVault内にローカルに保存されます（data.json）。Vaultのセキュリティを適切に管理してください。
 ```
 
 ---
@@ -307,26 +314,35 @@ title-forge-obsidian/
 - ネットワーク: API呼び出し時のみ通信
 
 ### 8.3 最適化
-- API呼び出しのデバウンス（連続実行防止）
-- タイムアウト設定（30秒）
+- APIキーバリデーションのデバウンス（300ms、連続入力時の負荷軽減）
+- API呼び出しタイムアウト設定（30秒）
 - エラー時の適切なクリーンアップ
+- メモリリーク対策（イベントリスナーとタイムアウトの適切な解放）
+- レースコンディション対策（設定タブのマウント状態チェック）
+- XSS脆弱性対策（DOM操作での安全なテキスト挿入）
+- アルゴリズム最適化（配列比較: MapベースのO(n)アプローチ）
 
 ---
 
 ## 9. テスト要件
 
-### 9.1 単体テスト
-- テキストサニタイズ処理
-- タグ正規化処理
-- 環境変数読み込み
-- バリデーション処理
+### 9.1 テストフレームワーク
+- **フレームワーク**: Vitest + jsdom
+- **カバレッジ閾値**: 80%（lines, functions, branches, statements）
+- **テストスイート**: 89テスト（validator: 36, text-sanitizer: 53）
 
-### 9.2 統合テスト
+### 9.2 単体テスト
+- テキストサニタイズ処理（sanitizeTitle, normalizeTags, truncateContent, removeFrontmatter）
+- タグ正規化処理
+- バリデーション処理（validateApiKey, validateContent, arraysEqual）
+- エッジケース、境界値、エラーケースを含む包括的テスト
+
+### 9.3 統合テスト
 - Gemini API連携
 - ファイルリネーム処理
 - Frontmatter更新処理
 
-### 9.3 手動テスト項目
+### 9.4 手動テスト項目
 - [ ] 空ノートでの実行
 - [ ] 日本語コンテンツでの実行
 - [ ] 英語コンテンツでの実行
@@ -397,6 +413,6 @@ MIT License（予定）
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-10
+**Document Version**: 1.1
+**Last Updated**: 2025-11-13
 **Author**: Development Team
