@@ -141,6 +141,16 @@ Obsidian Syncで設定を同期する場合：
 - 信頼できるデバイス間でのみ同期してください
 - 共有Vaultを使用する場合は、APIキーを含む設定の同期に注意してください
 
+## コントリビューション
+
+バグ報告、機能リクエスト、Pull Requestを歓迎します！
+
+詳細は[CONTRIBUTING.md](./CONTRIBUTING.md)を参照してください。
+
+## セキュリティ
+
+セキュリティ脆弱性を発見した場合は、[SECURITY.md](./SECURITY.md)を参照してください。
+
 ## ドキュメント
 
 - [プラグイン仕様書](./docs/plugin-specification.md)

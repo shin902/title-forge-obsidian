@@ -23,10 +23,15 @@ Thumbs.db
 # Environment variables and secrets
 .env
 .env.*
+.env.local
+.env.*.local
 *.key
 *.pem
 config.local.json
+secrets.json
+credentials.json
 
 # Test coverage
 coverage/
 .nyc_output/
+.vitest/
