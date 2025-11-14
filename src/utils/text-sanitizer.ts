@@ -57,10 +57,15 @@ export function normalizeTags(tags: string | string[]): string[] {
 /**
  * Truncates content to a maximum length
  * @param content - The content to truncate
- * @param maxLength - Maximum length
+ * @param maxLength - Maximum length (negative values treated as 0)
  * @returns Truncated content
  */
 export function truncateContent(content: string, maxLength: number): string {
+	// Explicitly handle negative or zero maxLength
+	if (maxLength <= 0) {
+		return '';
+	}
+
 	if (content.length <= maxLength) {
 		return content;
 	}

@@ -1,14 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { validateApiKey, validateContent, arraysEqual } from './validator';
 
+// Test constants for API key validation
+const API_KEY_PREFIX = 'AI';
+const MIN_API_KEY_LENGTH = 20;
+const MIN_SUFFIX_LENGTH = MIN_API_KEY_LENGTH - API_KEY_PREFIX.length; // 18
+
 describe('validateApiKey', () => {
 	describe('valid API keys', () => {
 		it('should accept valid API key with exactly 20 characters', () => {
-			expect(validateApiKey('AI' + 'a'.repeat(18))).toBe(true);
+			expect(validateApiKey(API_KEY_PREFIX + 'a'.repeat(MIN_SUFFIX_LENGTH))).toBe(true);
 		});
 
 		it('should accept valid API key with more than 20 characters', () => {
-			expect(validateApiKey('AI' + 'a'.repeat(30))).toBe(true);
+			expect(validateApiKey(API_KEY_PREFIX + 'a'.repeat(30))).toBe(true);
 		});
 
 		it('should accept API key with uppercase letters', () => {
@@ -46,7 +51,7 @@ describe('validateApiKey', () => {
 		});
 
 		it('should reject API key shorter than 20 characters', () => {
-			expect(validateApiKey('AI' + 'a'.repeat(17))).toBe(false);
+			expect(validateApiKey(API_KEY_PREFIX + 'a'.repeat(MIN_SUFFIX_LENGTH - 1))).toBe(false);
 		});
 
 		it('should reject API key not starting with AI', () => {
@@ -54,7 +59,7 @@ describe('validateApiKey', () => {
 		});
 
 		it('should reject API key starting with lowercase ai', () => {
-			expect(validateApiKey('ai' + 'a'.repeat(18))).toBe(false);
+			expect(validateApiKey('ai' + 'a'.repeat(MIN_SUFFIX_LENGTH))).toBe(false);
 		});
 
 		it('should reject API key with invalid characters', () => {
