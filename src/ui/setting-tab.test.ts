@@ -2,6 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TitleForgeSettingTab } from './setting-tab';
 import { App } from 'obsidian';
 import TitleForgePlugin from '../main';
+import {
+	TEST_CONSTANTS,
+	createTestSettings,
+	getSliderByLabel,
+	getToggleByLabel,
+	getApiKeyInput,
+	getApiKeyToggleButton,
+	getValidationWarningByText,
+	getSectionByHeading
+} from './test-helpers';
 
 // Type helper for accessing internal properties in tests
 type TitleForgeSettingTabInternal = TitleForgeSettingTab & {
@@ -274,53 +284,61 @@ describe('TitleForgeSettingTab', () => {
 		it('should create API settings section', () => {
 			settingTab.display();
 
-			const headers = Array.from(settingTab.containerEl.querySelectorAll('h2'));
-			const apiHeader = headers.find(h => h.textContent === 'API設定');
+			const apiHeader = getSectionByHeading(
+				settingTab.containerEl,
+				TEST_CONSTANTS.SECTIONS.API_SETTINGS
+			);
 			expect(apiHeader).toBeDefined();
 		});
 
 		it('should create title generation settings section', () => {
 			settingTab.display();
 
-			const headers = Array.from(settingTab.containerEl.querySelectorAll('h2'));
-			const titleHeader = headers.find(h => h.textContent === 'タイトル生成設定');
+			const titleHeader = getSectionByHeading(
+				settingTab.containerEl,
+				TEST_CONSTANTS.SECTIONS.TITLE_GENERATION
+			);
 			expect(titleHeader).toBeDefined();
 		});
 
 		it('should create tag generation settings section', () => {
 			settingTab.display();
 
-			const headers = Array.from(settingTab.containerEl.querySelectorAll('h2'));
-			const tagHeader = headers.find(h => h.textContent === 'タグ生成設定');
+			const tagHeader = getSectionByHeading(
+				settingTab.containerEl,
+				TEST_CONSTANTS.SECTIONS.TAG_GENERATION
+			);
 			expect(tagHeader).toBeDefined();
 		});
 
 		it('should create display settings section', () => {
 			settingTab.display();
 
-			const headers = Array.from(settingTab.containerEl.querySelectorAll('h2'));
-			const displayHeader = headers.find(h => h.textContent === '表示設定');
+			const displayHeader = getSectionByHeading(
+				settingTab.containerEl,
+				TEST_CONSTANTS.SECTIONS.DISPLAY_SETTINGS
+			);
 			expect(displayHeader).toBeDefined();
 		});
 
 		it('should create API key input field', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]');
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
 			expect(apiKeyInput).toBeDefined();
 		});
 
 		it('should set API key input placeholder', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
 			expect(apiKeyInput?.placeholder).toBe('AIza...');
 		});
 
 		it('should disable autocomplete on API key input', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
 			expect(apiKeyInput?.getAttribute('autocomplete')).toBe('off');
 		});
 
@@ -338,28 +356,33 @@ describe('TitleForgeSettingTab', () => {
 		it('should save settings when API key changes', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
 
 			// Simulate input change
-			apiKeyInput.value = 'AIzaSyTest123456789012345';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			apiKeyInput!.value = TEST_CONSTANTS.VALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
-			// Advance timers past debounce delay (300ms)
-			await vi.advanceTimersByTimeAsync(400);
+			// Advance timers past debounce delay
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
+			await vi.advanceTimersByTimeAsync(waitTime);
 
-			expect(plugin.settings.apiKey).toBe('AIzaSyTest123456789012345');
+			expect(plugin.settings.apiKey).toBe(TEST_CONSTANTS.VALID_API_KEY);
 			expect(plugin.saveSettings).toHaveBeenCalled();
 		});
 
 		it('should save settings when max title length changes', async () => {
 			settingTab.display();
 
-			const sliders = settingTab.containerEl.querySelectorAll('input[type="range"]');
-			const titleLengthSlider = sliders[0] as HTMLInputElement;
+			const titleLengthSlider = getSliderByLabel(
+				settingTab.containerEl,
+				TEST_CONSTANTS.LABELS.MAX_TITLE_LENGTH
+			);
+			expect(titleLengthSlider).toBeDefined();
 
 			// Simulate slider change
-			titleLengthSlider.value = '50';
-			titleLengthSlider.dispatchEvent(new Event('input'));
+			titleLengthSlider!.value = '50';
+			titleLengthSlider!.dispatchEvent(new Event('input'));
 
 			// Settings should save immediately (no debounce for sliders)
 			await vi.advanceTimersByTimeAsync(0);
@@ -371,12 +394,29 @@ describe('TitleForgeSettingTab', () => {
 		it('should save settings when temperature changes', async () => {
 			settingTab.display();
 
-			const sliders = settingTab.containerEl.querySelectorAll('input[type="range"]');
-			const titleTempSlider = sliders[1] as HTMLInputElement;
+			// Find the first Temperature slider in the Title Generation section
+			const titleSection = getSectionByHeading(
+				settingTab.containerEl,
+				TEST_CONSTANTS.SECTIONS.TITLE_GENERATION
+			);
+			expect(titleSection).toBeDefined();
+
+			// Get all sliders and find the one in the title generation section
+			const allSliders = Array.from(settingTab.containerEl.querySelectorAll('input[type="range"]'));
+			const titleTempSlider = allSliders.find(slider => {
+				const setting = slider.closest('.setting-item');
+				if (!setting) return false;
+				const nameEl = setting.querySelector('.setting-item-name');
+				const descEl = setting.querySelector('.setting-item-description');
+				return nameEl?.textContent === TEST_CONSTANTS.LABELS.TITLE_TEMPERATURE &&
+					descEl?.textContent?.includes('タイトル生成');
+			}) as HTMLInputElement;
+
+			expect(titleTempSlider).toBeDefined();
 
 			// Simulate slider change
-			titleTempSlider.value = '0.5';
-			titleTempSlider.dispatchEvent(new Event('input'));
+			titleTempSlider!.value = '0.5';
+			titleTempSlider!.dispatchEvent(new Event('input'));
 
 			// Settings should save immediately (no debounce for sliders)
 			await vi.advanceTimersByTimeAsync(0);
@@ -388,12 +428,15 @@ describe('TitleForgeSettingTab', () => {
 		it('should save settings when toggle changes', async () => {
 			settingTab.display();
 
-			const toggles = settingTab.containerEl.querySelectorAll('input[type="checkbox"]');
-			const ribbonToggle = toggles[0] as HTMLInputElement;
+			const ribbonToggle = getToggleByLabel(
+				settingTab.containerEl,
+				TEST_CONSTANTS.LABELS.SHOW_RIBBON_ICONS
+			);
+			expect(ribbonToggle).toBeDefined();
 
 			// Simulate toggle change
-			ribbonToggle.checked = true;
-			ribbonToggle.dispatchEvent(new Event('change'));
+			ribbonToggle!.checked = true;
+			ribbonToggle!.dispatchEvent(new Event('change'));
 
 			// Settings should save immediately (no debounce for toggles)
 			await vi.advanceTimersByTimeAsync(0);
@@ -433,65 +476,77 @@ describe('TitleForgeSettingTab', () => {
 		it('should show validation warning for invalid API key', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
 
 			// Enter invalid API key
-			apiKeyInput.value = 'invalid';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			apiKeyInput!.value = TEST_CONSTANTS.INVALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
-			// Advance timers past debounce delay (300ms)
-			await vi.advanceTimersByTimeAsync(400);
+			// Advance timers past debounce delay
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
+			await vi.advanceTimersByTimeAsync(waitTime);
 
-			const warning = settingTab.containerEl.querySelector('.mod-warning');
+			const warning = getValidationWarningByText(
+				settingTab.containerEl,
+				'APIキーの形式が正しくない'
+			);
 			expect(warning).toBeDefined();
-			expect(warning?.textContent).toContain('APIキーの形式が正しくない');
 		});
 
 		it('should not show validation warning for valid API key', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
 
 			// Enter valid API key
-			apiKeyInput.value = 'AIzaSyTest123456789012345';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			apiKeyInput!.value = TEST_CONSTANTS.VALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
-			// Advance timers past debounce delay (300ms)
-			await vi.advanceTimersByTimeAsync(400);
+			// Advance timers past debounce delay
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
+			await vi.advanceTimersByTimeAsync(waitTime);
 
-			// Should not have validation warning (or should be removed)
-			const warnings = settingTab.containerEl.querySelectorAll('.mod-warning');
-			const validationWarning = Array.from(warnings).find(w =>
-				w.textContent?.includes('APIキーの形式が正しくない')
+			// Should not have validation warning
+			const validationWarning = getValidationWarningByText(
+				settingTab.containerEl,
+				'APIキーの形式が正しくない'
 			);
-			expect(validationWarning).toBeUndefined();
+			expect(validationWarning).toBeNull();
 		});
 
 		it('should clear validation warning when fixing invalid API key', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
+
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
 
 			// First enter invalid key
-			apiKeyInput.value = 'invalid';
-			apiKeyInput.dispatchEvent(new Event('input'));
-			await vi.advanceTimersByTimeAsync(400);
+			apiKeyInput!.value = TEST_CONSTANTS.INVALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
+			await vi.advanceTimersByTimeAsync(waitTime);
 
 			// Verify warning appears
-			let warning = settingTab.containerEl.querySelector('.mod-warning');
+			let warning = getValidationWarningByText(
+				settingTab.containerEl,
+				'APIキーの形式が正しくない'
+			);
 			expect(warning).toBeDefined();
 
 			// Then fix it
-			apiKeyInput.value = 'AIzaSyTest123456789012345';
-			apiKeyInput.dispatchEvent(new Event('input'));
-			await vi.advanceTimersByTimeAsync(400);
+			apiKeyInput!.value = TEST_CONSTANTS.VALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
+			await vi.advanceTimersByTimeAsync(waitTime);
 
 			// Warning should be removed
-			const warnings = settingTab.containerEl.querySelectorAll('.mod-warning');
-			const validationWarning = Array.from(warnings).find(w =>
-				w.textContent?.includes('APIキーの形式が正しくない')
+			const validationWarning = getValidationWarningByText(
+				settingTab.containerEl,
+				'APIキーの形式が正しくない'
 			);
-			expect(validationWarning).toBeUndefined();
+			expect(validationWarning).toBeNull();
 		});
 	});
 
@@ -499,7 +554,7 @@ describe('TitleForgeSettingTab', () => {
 		it('should create toggle button for API key visibility', () => {
 			settingTab.display();
 
-			const toggleButton = settingTab.containerEl.querySelector('.api-key-toggle-btn');
+			const toggleButton = getApiKeyToggleButton(settingTab.containerEl);
 			expect(toggleButton).toBeDefined();
 			expect(toggleButton?.textContent).toBe('👁️');
 		});
@@ -507,42 +562,45 @@ describe('TitleForgeSettingTab', () => {
 		it('should toggle API key visibility when button is clicked', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
-			const toggleButton = settingTab.containerEl.querySelector('.api-key-toggle-btn') as HTMLButtonElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			const toggleButton = getApiKeyToggleButton(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
+			expect(toggleButton).toBeDefined();
 
 			// Initial state should be password
-			expect(apiKeyInput.type).toBe('password');
+			expect(apiKeyInput!.type).toBe('password');
 
 			// Click to show
-			toggleButton.click();
-			expect(apiKeyInput.type).toBe('text');
-			expect(toggleButton.textContent).toBe('🙈');
+			toggleButton!.click();
+			expect(apiKeyInput!.type).toBe('text');
+			expect(toggleButton!.textContent).toBe('🙈');
 
 			// Click to hide
-			toggleButton.click();
-			expect(apiKeyInput.type).toBe('password');
-			expect(toggleButton.textContent).toBe('👁️');
+			toggleButton!.click();
+			expect(apiKeyInput!.type).toBe('password');
+			expect(toggleButton!.textContent).toBe('👁️');
 		});
 
 		it('should have proper aria-label for accessibility', () => {
 			settingTab.display();
 
-			const toggleButton = settingTab.containerEl.querySelector('.api-key-toggle-btn') as HTMLButtonElement;
-			expect(toggleButton.getAttribute('aria-label')).toBe('Show API key');
+			const toggleButton = getApiKeyToggleButton(settingTab.containerEl);
+			expect(toggleButton?.getAttribute('aria-label')).toBe('Show API key');
 		});
 
 		it('should update aria-label when toggled', () => {
 			settingTab.display();
 
-			const toggleButton = settingTab.containerEl.querySelector('.api-key-toggle-btn') as HTMLButtonElement;
+			const toggleButton = getApiKeyToggleButton(settingTab.containerEl);
+			expect(toggleButton).toBeDefined();
 
 			// Click to show
-			toggleButton.click();
-			expect(toggleButton.getAttribute('aria-label')).toBe('Hide API key');
+			toggleButton!.click();
+			expect(toggleButton!.getAttribute('aria-label')).toBe('Hide API key');
 
 			// Click to hide
-			toggleButton.click();
-			expect(toggleButton.getAttribute('aria-label')).toBe('Show API key');
+			toggleButton!.click();
+			expect(toggleButton!.getAttribute('aria-label')).toBe('Show API key');
 		});
 	});
 
@@ -565,11 +623,12 @@ describe('TitleForgeSettingTab', () => {
 		it('should handle cleanup of pending timers on hide', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
 
 			// Start validation timeout
-			apiKeyInput.value = 'invalid';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			apiKeyInput!.value = TEST_CONSTANTS.INVALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
 			// Don't wait for timeout - hide immediately to test cleanup
 			settingTab.hide();
@@ -578,27 +637,30 @@ describe('TitleForgeSettingTab', () => {
 			expect(internal.isMounted).toBe(false);
 
 			// Advance time past debounce - should not cause errors or add messages
-			await vi.advanceTimersByTimeAsync(400);
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
+			await vi.advanceTimersByTimeAsync(waitTime);
 
 			// Validation message should not be added after unmount
-			const warning = settingTab.containerEl.querySelector('.mod-warning');
+			const warning = getValidationWarningByText(settingTab.containerEl, 'APIキー');
 			expect(warning).toBeNull();
 		});
 
 		it('should not execute validation callback after unmount', async () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
 
 			// Start validation
-			apiKeyInput.value = 'invalid';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			apiKeyInput!.value = TEST_CONSTANTS.INVALID_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
 			// Unmount immediately
 			settingTab.hide();
 
 			// Advance time past debounce
-			await vi.advanceTimersByTimeAsync(400);
+			const waitTime = TEST_CONSTANTS.VALIDATION_DEBOUNCE_MS + TEST_CONSTANTS.TIMER_MARGIN_MS;
+			await vi.advanceTimersByTimeAsync(waitTime);
 
 			// Should not have added validation message (tab was unmounted)
 			const internal = settingTab as TitleForgeSettingTabInternal;
@@ -610,16 +672,14 @@ describe('TitleForgeSettingTab', () => {
 		it('should prevent autocomplete on API key field', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
 			expect(apiKeyInput?.getAttribute('autocomplete')).toBe('off');
 		});
 
 		it('should use password type by default for API key', () => {
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input') as HTMLInputElement;
-			// Should find the password input (not the toggle button)
-			const passwordInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			const passwordInput = getApiKeyInput(settingTab.containerEl);
 			expect(passwordInput).toBeDefined();
 			expect(passwordInput?.type).toBe('password');
 		});
@@ -639,9 +699,11 @@ describe('TitleForgeSettingTab', () => {
 
 			settingTab.display();
 
-			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
-			apiKeyInput.value = 'AIzaSySecretKey123456789';
-			apiKeyInput.dispatchEvent(new Event('input'));
+			const apiKeyInput = getApiKeyInput(settingTab.containerEl);
+			expect(apiKeyInput).toBeDefined();
+
+			apiKeyInput!.value = TEST_CONSTANTS.SECRET_API_KEY;
+			apiKeyInput!.dispatchEvent(new Event('input'));
 
 			// Check console was not called with API key
 			expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('AIza'));
@@ -676,14 +738,12 @@ describe('TitleForgeSettingTab', () => {
 		it('should structure content with proper headings', () => {
 			settingTab.display();
 
-			const headings = Array.from(settingTab.containerEl.querySelectorAll('h2'));
-			const headingTexts = headings.map(h => h.textContent);
-
-			// Should have all main section headings
-			expect(headingTexts).toContain('API設定');
-			expect(headingTexts).toContain('タイトル生成設定');
-			expect(headingTexts).toContain('タグ生成設定');
-			expect(headingTexts).toContain('表示設定');
+			// Use constants for section names
+			const sections = Object.values(TEST_CONSTANTS.SECTIONS);
+			sections.forEach(sectionName => {
+				const section = getSectionByHeading(settingTab.containerEl, sectionName);
+				expect(section).toBeDefined();
+			});
 		});
 	});
 });

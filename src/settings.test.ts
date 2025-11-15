@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GEMINI_MODEL, DEFAULT_SETTINGS, TitleForgeSettings } from './settings';
+import { validateApiKey } from './utils/validator';
 
 describe('Settings', () => {
 	describe('GEMINI_MODEL', () => {
@@ -138,108 +139,183 @@ describe('Settings', () => {
 
 	describe('Edge cases and boundary values', () => {
 		describe('Title length boundaries', () => {
-			it('should handle minimum title length', () => {
+			it('should accept minimum slider value (10)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
-					maxTitleLength: 1
+					maxTitleLength: 10
 				};
-				expect(settings.maxTitleLength).toBeGreaterThan(0);
+				expect(settings.maxTitleLength).toBe(10);
+				expect(settings.maxTitleLength).toBeGreaterThanOrEqual(10);
 			});
 
-			it('should handle maximum title length', () => {
+			it('should accept maximum slider value (100)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
 					maxTitleLength: 100
 				};
+				expect(settings.maxTitleLength).toBe(100);
 				expect(settings.maxTitleLength).toBeLessThanOrEqual(100);
 			});
 
-			it('should handle default title length within range', () => {
+			it('should have default within slider range', () => {
 				expect(DEFAULT_SETTINGS.maxTitleLength).toBeGreaterThanOrEqual(10);
 				expect(DEFAULT_SETTINGS.maxTitleLength).toBeLessThanOrEqual(100);
+			});
+
+			it('should accept values divisible by step (5)', () => {
+				const validValues = [10, 15, 20, 25, 30, 35, 40, 45, 50];
+				validValues.forEach(value => {
+					const settings: TitleForgeSettings = {
+						...DEFAULT_SETTINGS,
+						maxTitleLength: value
+					};
+					expect(settings.maxTitleLength % 5).toBe(0);
+				});
 			});
 		});
 
 		describe('Temperature boundaries', () => {
-			it('should handle minimum temperature for title', () => {
+			it('should accept minimum temperature (0.0)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
-					titleTemperature: 0
-				};
-				expect(settings.titleTemperature).toBeGreaterThanOrEqual(0);
-			});
-
-			it('should handle maximum temperature for title', () => {
-				const settings: TitleForgeSettings = {
-					...DEFAULT_SETTINGS,
-					titleTemperature: 1
-				};
-				expect(settings.titleTemperature).toBeLessThanOrEqual(1);
-			});
-
-			it('should handle minimum temperature for tags', () => {
-				const settings: TitleForgeSettings = {
-					...DEFAULT_SETTINGS,
+					titleTemperature: 0,
 					tagTemperature: 0
 				};
-				expect(settings.tagTemperature).toBeGreaterThanOrEqual(0);
+				expect(settings.titleTemperature).toBe(0);
+				expect(settings.tagTemperature).toBe(0);
 			});
 
-			it('should handle maximum temperature for tags', () => {
+			it('should accept maximum temperature (1.0)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
+					titleTemperature: 1,
 					tagTemperature: 1
 				};
-				expect(settings.tagTemperature).toBeLessThanOrEqual(1);
+				expect(settings.titleTemperature).toBe(1);
+				expect(settings.tagTemperature).toBe(1);
+			});
+
+			it('should have defaults within range', () => {
+				expect(DEFAULT_SETTINGS.titleTemperature).toBeGreaterThanOrEqual(0);
+				expect(DEFAULT_SETTINGS.titleTemperature).toBeLessThanOrEqual(1);
+				expect(DEFAULT_SETTINGS.tagTemperature).toBeGreaterThanOrEqual(0);
+				expect(DEFAULT_SETTINGS.tagTemperature).toBeLessThanOrEqual(1);
+			});
+
+			it('should use low temperature for deterministic generation', () => {
+				// Temperature should be low (≤ 0.3) for consistent results
+				expect(DEFAULT_SETTINGS.titleTemperature).toBeLessThanOrEqual(0.3);
+				expect(DEFAULT_SETTINGS.tagTemperature).toBeLessThanOrEqual(0.3);
 			});
 		});
 
-		describe('Token limits', () => {
-			it('should have reasonable title token limits', () => {
-				expect(DEFAULT_SETTINGS.titleMaxOutputTokens).toBeGreaterThan(0);
-				expect(DEFAULT_SETTINGS.titleMaxOutputTokens).toBeLessThanOrEqual(1000);
-			});
-
-			it('should have reasonable tag token limits', () => {
-				expect(DEFAULT_SETTINGS.tagMaxOutputTokens).toBeGreaterThan(0);
-				expect(DEFAULT_SETTINGS.tagMaxOutputTokens).toBeLessThanOrEqual(1000);
-			});
-		});
-
-		describe('Content length', () => {
-			it('should handle minimum content length', () => {
+		describe('Content length boundaries', () => {
+			it('should accept minimum slider value (50)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
 					maxContentLength: 50
 				};
-				expect(settings.maxContentLength).toBeGreaterThanOrEqual(50);
+				expect(settings.maxContentLength).toBe(50);
 			});
 
-			it('should handle maximum content length', () => {
+			it('should accept maximum slider value (500)', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
 					maxContentLength: 500
 				};
-				expect(settings.maxContentLength).toBeLessThanOrEqual(500);
+				expect(settings.maxContentLength).toBe(500);
 			});
 
-			it('should have reasonable default content length', () => {
+			it('should have default within slider range', () => {
 				expect(DEFAULT_SETTINGS.maxContentLength).toBeGreaterThanOrEqual(50);
 				expect(DEFAULT_SETTINGS.maxContentLength).toBeLessThanOrEqual(500);
 			});
+
+			it('should accept values divisible by step (25)', () => {
+				const validValues = [50, 75, 100, 125, 150];
+				validValues.forEach(value => {
+					const settings: TitleForgeSettings = {
+						...DEFAULT_SETTINGS,
+						maxContentLength: value
+					};
+					expect(settings.maxContentLength % 25).toBe(0);
+				});
+			});
 		});
 
-		describe('API key edge cases', () => {
+		describe('API key validation integration', () => {
 			it('should accept empty API key as default', () => {
 				expect(DEFAULT_SETTINGS.apiKey).toBe('');
 			});
 
-			it('should accept valid API key', () => {
+			it('should validate API keys with validator function', () => {
+				const validKey = 'AIzaSyTest123456789012345678901234567890';
+				const invalidKey = 'invalid-key';
+
+				expect(validateApiKey(validKey)).toBe(true);
+				expect(validateApiKey(invalidKey)).toBe(false);
+			});
+
+			it('should accept valid API key format', () => {
 				const settings: TitleForgeSettings = {
 					...DEFAULT_SETTINGS,
 					apiKey: 'AIzaSyTest123456789012345678901234567890'
 				};
-				expect(settings.apiKey).toMatch(/^AIza/);
+				expect(validateApiKey(settings.apiKey)).toBe(true);
+			});
+
+			it('should handle minimum valid API key length', () => {
+				// Minimum valid: "AI" prefix + 18 more characters = 20 total
+				const minValidKey = 'AIzaSy12345678901234';
+				expect(validateApiKey(minValidKey)).toBe(true);
+				expect(minValidKey.length).toBe(20);
+			});
+
+			it('should reject invalid API key formats', () => {
+				const invalidKeys = [
+					'',                          // empty
+					'AIza',                      // too short
+					'XYzaSy1234567890123456',    // wrong prefix
+					'   AIzaSy123456789012345'   // leading whitespace
+				];
+
+				invalidKeys.forEach(key => {
+					expect(validateApiKey(key)).toBe(false);
+				});
+			});
+		});
+
+		describe('Settings consistency', () => {
+			it('should have tag tokens larger than title tokens', () => {
+				// Tags need more tokens as they generate multiple items
+				expect(DEFAULT_SETTINGS.tagMaxOutputTokens).toBeGreaterThan(
+					DEFAULT_SETTINGS.titleMaxOutputTokens
+				);
+			});
+
+			it('should use same temperature for both generators', () => {
+				// Consistent temperature across generators
+				expect(DEFAULT_SETTINGS.titleTemperature).toBe(
+					DEFAULT_SETTINGS.tagTemperature
+				);
+			});
+
+			it('should have all required properties', () => {
+				const requiredProps: (keyof TitleForgeSettings)[] = [
+					'apiKey',
+					'maxTitleLength',
+					'titleTemperature',
+					'titleMaxOutputTokens',
+					'tagTemperature',
+					'tagMaxOutputTokens',
+					'maxContentLength',
+					'showRibbonIcons',
+					'enableNotifications'
+				];
+
+				requiredProps.forEach(prop => {
+					expect(DEFAULT_SETTINGS).toHaveProperty(prop);
+				});
 			});
 		});
 	});
