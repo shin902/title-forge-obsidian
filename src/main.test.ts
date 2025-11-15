@@ -217,6 +217,9 @@ describe('TitleForgePlugin', () => {
 				apiKey: 'AIzaSyD-test_1234567890',
 				enableNotifications: true
 			} as any;
+			// Initialize generators for tests that need them
+			(plugin as any).titleGenerator = mockTitleGenerator;
+			(plugin as any).tagGenerator = mockTagGenerator;
 		});
 
 		it('should show error when API key is invalid', async () => {
@@ -342,6 +345,9 @@ describe('TitleForgePlugin', () => {
 				apiKey: 'AIzaSyD-test_1234567890',
 				enableNotifications: true
 			} as any;
+			// Initialize generators for tests that need them
+			(plugin as any).titleGenerator = mockTitleGenerator;
+			(plugin as any).tagGenerator = mockTagGenerator;
 		});
 
 		it('should show error when API key is invalid', async () => {
