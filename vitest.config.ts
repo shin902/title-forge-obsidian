@@ -19,11 +19,17 @@ export default defineConfig({
 				branches: 80,
 				statements: 80
 			}
+		},
+		server: {
+			deps: {
+				inline: ['obsidian']
+			}
 		}
 	},
 	resolve: {
 		alias: {
-			'@': path.resolve(__dirname, './src')
+			'@': path.resolve(__dirname, './src'),
+			'obsidian': path.resolve(__dirname, './__mocks__/obsidian.ts')
 		}
 	}
 });
