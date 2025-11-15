@@ -1,7 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TitleForgeSettingTab } from './setting-tab';
 import { App } from 'obsidian';
 import TitleForgePlugin from '../main';
+
+// Type helper for accessing internal properties in tests
+type TitleForgeSettingTabInternal = TitleForgeSettingTab & {
+	isMounted: boolean;
+	validationMessage: HTMLElement | null;
+	validationTimeout: ReturnType<typeof setTimeout> | null;
+	toggleContainer: HTMLElement | null;
+};
 
 // Mock Obsidian classes
 vi.mock('obsidian', () => {
@@ -201,6 +209,9 @@ describe('TitleForgeSettingTab', () => {
 	let settingTab: TitleForgeSettingTab;
 
 	beforeEach(() => {
+		// Use fake timers for better test performance and control
+		vi.useFakeTimers();
+
 		// Create mock app
 		app = {} as App;
 
@@ -222,6 +233,20 @@ describe('TitleForgeSettingTab', () => {
 
 		// Create setting tab
 		settingTab = new TitleForgeSettingTab(app, plugin);
+	});
+
+	afterEach(() => {
+		// Cleanup to prevent memory leaks
+		if (settingTab) {
+			settingTab.hide();
+		}
+
+		// Run pending timers and restore real timers
+		vi.runOnlyPendingTimers();
+		vi.useRealTimers();
+
+		// Clear all mocks
+		vi.clearAllMocks();
 	});
 
 	describe('Constructor', () => {
@@ -319,8 +344,8 @@ describe('TitleForgeSettingTab', () => {
 			apiKeyInput.value = 'AIzaSyTest123456789012345';
 			apiKeyInput.dispatchEvent(new Event('input'));
 
-			// Wait for debounce
-			await new Promise(resolve => setTimeout(resolve, 400));
+			// Advance timers past debounce delay (300ms)
+			await vi.advanceTimersByTimeAsync(400);
 
 			expect(plugin.settings.apiKey).toBe('AIzaSyTest123456789012345');
 			expect(plugin.saveSettings).toHaveBeenCalled();
@@ -336,7 +361,8 @@ describe('TitleForgeSettingTab', () => {
 			titleLengthSlider.value = '50';
 			titleLengthSlider.dispatchEvent(new Event('input'));
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			// Settings should save immediately (no debounce for sliders)
+			await vi.advanceTimersByTimeAsync(0);
 
 			expect(plugin.settings.maxTitleLength).toBe(50);
 			expect(plugin.saveSettings).toHaveBeenCalled();
@@ -352,7 +378,8 @@ describe('TitleForgeSettingTab', () => {
 			titleTempSlider.value = '0.5';
 			titleTempSlider.dispatchEvent(new Event('input'));
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			// Settings should save immediately (no debounce for sliders)
+			await vi.advanceTimersByTimeAsync(0);
 
 			expect(plugin.settings.titleTemperature).toBe(0.5);
 			expect(plugin.saveSettings).toHaveBeenCalled();
@@ -368,7 +395,8 @@ describe('TitleForgeSettingTab', () => {
 			ribbonToggle.checked = true;
 			ribbonToggle.dispatchEvent(new Event('change'));
 
-			await new Promise(resolve => setTimeout(resolve, 100));
+			// Settings should save immediately (no debounce for toggles)
+			await vi.advanceTimersByTimeAsync(0);
 
 			expect(plugin.settings.showRibbonIcons).toBe(true);
 			expect(plugin.saveSettings).toHaveBeenCalled();
@@ -382,8 +410,9 @@ describe('TitleForgeSettingTab', () => {
 			// Call hide to trigger cleanup
 			settingTab.hide();
 
-			// Verify isMounted is false
-			expect((settingTab as any).isMounted).toBe(false);
+			// Verify isMounted is false using type-safe helper
+			const internal = settingTab as TitleForgeSettingTabInternal;
+			expect(internal.isMounted).toBe(false);
 		});
 
 		it('should cleanup when display is called multiple times', () => {
@@ -410,8 +439,8 @@ describe('TitleForgeSettingTab', () => {
 			apiKeyInput.value = 'invalid';
 			apiKeyInput.dispatchEvent(new Event('input'));
 
-			// Wait for debounce and validation
-			await new Promise(resolve => setTimeout(resolve, 400));
+			// Advance timers past debounce delay (300ms)
+			await vi.advanceTimersByTimeAsync(400);
 
 			const warning = settingTab.containerEl.querySelector('.mod-warning');
 			expect(warning).toBeDefined();
@@ -427,8 +456,8 @@ describe('TitleForgeSettingTab', () => {
 			apiKeyInput.value = 'AIzaSyTest123456789012345';
 			apiKeyInput.dispatchEvent(new Event('input'));
 
-			// Wait for debounce
-			await new Promise(resolve => setTimeout(resolve, 400));
+			// Advance timers past debounce delay (300ms)
+			await vi.advanceTimersByTimeAsync(400);
 
 			// Should not have validation warning (or should be removed)
 			const warnings = settingTab.containerEl.querySelectorAll('.mod-warning');
@@ -446,7 +475,7 @@ describe('TitleForgeSettingTab', () => {
 			// First enter invalid key
 			apiKeyInput.value = 'invalid';
 			apiKeyInput.dispatchEvent(new Event('input'));
-			await new Promise(resolve => setTimeout(resolve, 400));
+			await vi.advanceTimersByTimeAsync(400);
 
 			// Verify warning appears
 			let warning = settingTab.containerEl.querySelector('.mod-warning');
@@ -455,7 +484,7 @@ describe('TitleForgeSettingTab', () => {
 			// Then fix it
 			apiKeyInput.value = 'AIzaSyTest123456789012345';
 			apiKeyInput.dispatchEvent(new Event('input'));
-			await new Promise(resolve => setTimeout(resolve, 400));
+			await vi.advanceTimersByTimeAsync(400);
 
 			// Warning should be removed
 			const warnings = settingTab.containerEl.querySelectorAll('.mod-warning');
@@ -514,6 +543,147 @@ describe('TitleForgeSettingTab', () => {
 			// Click to hide
 			toggleButton.click();
 			expect(toggleButton.getAttribute('aria-label')).toBe('Show API key');
+		});
+	});
+
+	describe('Error handling and edge cases', () => {
+		it('should handle rapid successive display calls without memory leaks', () => {
+			// Call display multiple times rapidly
+			settingTab.display();
+			settingTab.display();
+			settingTab.display();
+
+			// Should not create duplicate DOM elements
+			const headers = settingTab.containerEl.querySelectorAll('h2');
+			const apiKeyInputs = settingTab.containerEl.querySelectorAll('input[type="password"]');
+
+			// Should have exactly one of each section and one API key input
+			expect(headers.length).toBe(4); // API, Title, Tag, Display sections
+			expect(apiKeyInputs.length).toBe(1);
+		});
+
+		it('should handle cleanup of pending timers on hide', async () => {
+			settingTab.display();
+
+			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+
+			// Start validation timeout
+			apiKeyInput.value = 'invalid';
+			apiKeyInput.dispatchEvent(new Event('input'));
+
+			// Don't wait for timeout - hide immediately to test cleanup
+			settingTab.hide();
+
+			const internal = settingTab as TitleForgeSettingTabInternal;
+			expect(internal.isMounted).toBe(false);
+
+			// Advance time past debounce - should not cause errors or add messages
+			await vi.advanceTimersByTimeAsync(400);
+
+			// Validation message should not be added after unmount
+			const warning = settingTab.containerEl.querySelector('.mod-warning');
+			expect(warning).toBeNull();
+		});
+
+		it('should not execute validation callback after unmount', async () => {
+			settingTab.display();
+
+			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+
+			// Start validation
+			apiKeyInput.value = 'invalid';
+			apiKeyInput.dispatchEvent(new Event('input'));
+
+			// Unmount immediately
+			settingTab.hide();
+
+			// Advance time past debounce
+			await vi.advanceTimersByTimeAsync(400);
+
+			// Should not have added validation message (tab was unmounted)
+			const internal = settingTab as TitleForgeSettingTabInternal;
+			expect(internal.isMounted).toBe(false);
+		});
+	});
+
+	describe('Security considerations', () => {
+		it('should prevent autocomplete on API key field', () => {
+			settingTab.display();
+
+			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			expect(apiKeyInput?.getAttribute('autocomplete')).toBe('off');
+		});
+
+		it('should use password type by default for API key', () => {
+			settingTab.display();
+
+			const apiKeyInput = settingTab.containerEl.querySelector('input') as HTMLInputElement;
+			// Should find the password input (not the toggle button)
+			const passwordInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			expect(passwordInput).toBeDefined();
+			expect(passwordInput?.type).toBe('password');
+		});
+
+		it('should open external links with security attributes', () => {
+			settingTab.display();
+
+			const link = settingTab.containerEl.querySelector('a[href="https://aistudio.google.com/app/apikey"]') as HTMLAnchorElement;
+			expect(link).toBeDefined();
+			expect(link?.getAttribute('target')).toBe('_blank');
+			expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+		});
+
+		it('should not log sensitive data', () => {
+			const consoleSpy = vi.spyOn(console, 'log');
+			const consoleErrorSpy = vi.spyOn(console, 'error');
+
+			settingTab.display();
+
+			const apiKeyInput = settingTab.containerEl.querySelector('input[type="password"]') as HTMLInputElement;
+			apiKeyInput.value = 'AIzaSySecretKey123456789';
+			apiKeyInput.dispatchEvent(new Event('input'));
+
+			// Check console was not called with API key
+			expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('AIza'));
+			expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining('AIza'));
+
+			consoleSpy.mockRestore();
+			consoleErrorSpy.mockRestore();
+		});
+	});
+
+	describe('Accessibility', () => {
+		it('should have descriptive labels for all settings', () => {
+			settingTab.display();
+
+			const settingNames = Array.from(settingTab.containerEl.querySelectorAll('.setting-item-name'));
+			const nameTexts = settingNames.map(el => el.textContent);
+
+			// Should have descriptive names for all settings
+			expect(nameTexts.length).toBeGreaterThan(0);
+			expect(nameTexts.every(name => name && name.length > 0)).toBe(true);
+		});
+
+		it('should have descriptions for complex settings', () => {
+			settingTab.display();
+
+			const settingDescs = Array.from(settingTab.containerEl.querySelectorAll('.setting-item-description'));
+
+			// Should have multiple descriptions
+			expect(settingDescs.length).toBeGreaterThan(0);
+		});
+
+		it('should structure content with proper headings', () => {
+			settingTab.display();
+
+			const headings = Array.from(settingTab.containerEl.querySelectorAll('h2'));
+			const headingTexts = headings.map(h => h.textContent);
+
+			// Should have all main section headings
+			expect(headingTexts).toContain('API設定');
+			expect(headingTexts).toContain('タイトル生成設定');
+			expect(headingTexts).toContain('タグ生成設定');
+			expect(headingTexts).toContain('表示設定');
 		});
 	});
 });

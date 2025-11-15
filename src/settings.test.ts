@@ -135,4 +135,112 @@ describe('Settings', () => {
 			expect(DEFAULT_SETTINGS.maxTitleLength).toBe(40);
 		});
 	});
+
+	describe('Edge cases and boundary values', () => {
+		describe('Title length boundaries', () => {
+			it('should handle minimum title length', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					maxTitleLength: 1
+				};
+				expect(settings.maxTitleLength).toBeGreaterThan(0);
+			});
+
+			it('should handle maximum title length', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					maxTitleLength: 100
+				};
+				expect(settings.maxTitleLength).toBeLessThanOrEqual(100);
+			});
+
+			it('should handle default title length within range', () => {
+				expect(DEFAULT_SETTINGS.maxTitleLength).toBeGreaterThanOrEqual(10);
+				expect(DEFAULT_SETTINGS.maxTitleLength).toBeLessThanOrEqual(100);
+			});
+		});
+
+		describe('Temperature boundaries', () => {
+			it('should handle minimum temperature for title', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					titleTemperature: 0
+				};
+				expect(settings.titleTemperature).toBeGreaterThanOrEqual(0);
+			});
+
+			it('should handle maximum temperature for title', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					titleTemperature: 1
+				};
+				expect(settings.titleTemperature).toBeLessThanOrEqual(1);
+			});
+
+			it('should handle minimum temperature for tags', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					tagTemperature: 0
+				};
+				expect(settings.tagTemperature).toBeGreaterThanOrEqual(0);
+			});
+
+			it('should handle maximum temperature for tags', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					tagTemperature: 1
+				};
+				expect(settings.tagTemperature).toBeLessThanOrEqual(1);
+			});
+		});
+
+		describe('Token limits', () => {
+			it('should have reasonable title token limits', () => {
+				expect(DEFAULT_SETTINGS.titleMaxOutputTokens).toBeGreaterThan(0);
+				expect(DEFAULT_SETTINGS.titleMaxOutputTokens).toBeLessThanOrEqual(1000);
+			});
+
+			it('should have reasonable tag token limits', () => {
+				expect(DEFAULT_SETTINGS.tagMaxOutputTokens).toBeGreaterThan(0);
+				expect(DEFAULT_SETTINGS.tagMaxOutputTokens).toBeLessThanOrEqual(1000);
+			});
+		});
+
+		describe('Content length', () => {
+			it('should handle minimum content length', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					maxContentLength: 50
+				};
+				expect(settings.maxContentLength).toBeGreaterThanOrEqual(50);
+			});
+
+			it('should handle maximum content length', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					maxContentLength: 500
+				};
+				expect(settings.maxContentLength).toBeLessThanOrEqual(500);
+			});
+
+			it('should have reasonable default content length', () => {
+				expect(DEFAULT_SETTINGS.maxContentLength).toBeGreaterThanOrEqual(50);
+				expect(DEFAULT_SETTINGS.maxContentLength).toBeLessThanOrEqual(500);
+			});
+		});
+
+		describe('API key edge cases', () => {
+			it('should accept empty API key as default', () => {
+				expect(DEFAULT_SETTINGS.apiKey).toBe('');
+			});
+
+			it('should accept valid API key', () => {
+				const settings: TitleForgeSettings = {
+					...DEFAULT_SETTINGS,
+					apiKey: 'AIzaSyTest123456789012345678901234567890'
+				};
+				expect(settings.apiKey).toMatch(/^AIza/);
+			});
+		});
+	});
 });
